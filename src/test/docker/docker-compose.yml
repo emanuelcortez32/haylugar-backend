@@ -1,0 +1,63 @@
+version: '3'
+services:
+  localstack:
+    image: localstack/localstack
+    container_name: aws-local-stack
+    environment:
+      - SERVICES=ssm,s3,ecr,ec2,sqs,apigateway,secretsmanager
+      - DEFAULT_REGION=us-east-1
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - CLEAR_TMP_FOLDER=0
+    ports:
+      - "127.0.0.1:4566:4566"                 #LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"       #External services port range
+    volumes:
+      - "/tmp/localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  mongodb:
+    image: mongodb/mongodb-community-server:6.0-ubi8
+    container_name: hay_lugar_db
+    env_file:
+      - .env
+    environment:
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+      - mongodb-log:/var/log/mongodb/
+      - ./mongo/init.d:/docker-entrypoint-initdb.d
+    networks:
+      - mongodb_network
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express-hay-lugar
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_SERVER: 'mongodb'
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD}
+    ports:
+      - "8081:8081"
+    networks:
+      - mongodb_network
+    depends_on:
+      - mongodb
+
+volumes:
+  mongodb-data:
+    driver: local
+  mongodb-log:
+    driver: local
+
+networks:
+  mongodb_network:
+    driver: bridge

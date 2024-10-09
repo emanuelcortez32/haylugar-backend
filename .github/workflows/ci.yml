@@ -1,0 +1,17 @@
+name: ci
+
+on:
+  # Trigger the action manually from the UI
+  workflow_dispatch:
+
+  #push:
+  #branches:
+  #  - master
+
+jobs:
+  run-ci:
+    name: Run CI
+    uses: greenbundle/cicd-libs-github/.github/workflows/common-ci-java17.yml@master
+    with:
+      environment: ${{ github.ref_name == 'master' && 'prod' || 'stage' }}
+    secrets: inherit
