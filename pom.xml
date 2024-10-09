@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>ar.com.greenbundle</groupId>
 	<artifactId>haylugar-backend</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2</version>
 	<name>haylugar-backend</name>
 	<description>Backend for HayLugar parking application</description>
 	<url/>
@@ -141,6 +141,22 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.gmaven</groupId>
+				<artifactId>groovy-maven-plugin</artifactId>
+				<version>2.1.1</version>
+				<executions>
+					<execution>
+						<phase>test</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<source>JacocoPrinter.groovy</source>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
