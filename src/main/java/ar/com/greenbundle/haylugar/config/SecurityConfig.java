@@ -25,7 +25,7 @@ public class SecurityConfig {
         http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(specs -> specs
-                        .pathMatchers("/auth/**").permitAll()
+                        .pathMatchers("/auth/**", "/healthcheck").permitAll()
                         .anyExchange().authenticated())
                 .addFilterAfter(jwtRequestFilter, SecurityWebFiltersOrder.FIRST)
                 .securityContextRepository(securityContextRepository)
