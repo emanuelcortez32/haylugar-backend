@@ -1,0 +1,17 @@
+name: cd
+
+on:
+  # Trigger the action manually from the UI
+  workflow_dispatch:
+
+  #push:
+  #branches:
+  #  - master
+
+jobs:
+  run-ci:
+    name: Run CD
+    uses: greenbundle/cicd-libs-github/.github/workflows/common-deploy.yml@master
+    with:
+      environment: ${{ github.ref_name == 'master' && 'prod' || 'stage' }}
+    secrets: inherit
