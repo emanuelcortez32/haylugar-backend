@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haylugar-backend-config
+data:
+  environment: "prod"
+  aws_region: "sa-east-1"

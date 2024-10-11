@@ -2,11 +2,9 @@ FROM amazoncorretto:17
 
 ARG aws_access_key
 ARG aws_secret_key
-ARG environment=dev
 
 ENV LANG C.UTF-8
 ENV APPLICATION haylugar
-ENV ENVIRONMENT=$environment
 
 ENV AWS_ACCESS_KEY=$aws_access_key
 ENV AWS_SECRET_KEY=$aws_secret_key
