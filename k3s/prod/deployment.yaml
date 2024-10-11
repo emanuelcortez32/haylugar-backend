@@ -31,7 +31,7 @@ spec:
             - name: DATABASE_URI
               valueFrom:
                 secretKeyRef:
-                  name: db_secret
+                  name: db-secret
                   key: uri
           ports:
             - containerPort: 8080
