@@ -42,3 +42,5 @@ spec:
             requests:
               cpu: "0.1"
               memory: "128Mi"
+      imagePullSecrets:
+        - name: aws-ecr-secret
