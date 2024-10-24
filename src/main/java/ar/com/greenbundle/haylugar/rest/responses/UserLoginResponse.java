@@ -5,17 +5,17 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class UserLoginResponse extends GenericResponse {
-    private String token;
-
     @Builder
     public UserLoginResponse(boolean success,
                              String message,
                              String token) {
         super(success, message);
-        this.token = token;
+        this.data = Map.of("token", token);
     }
 }

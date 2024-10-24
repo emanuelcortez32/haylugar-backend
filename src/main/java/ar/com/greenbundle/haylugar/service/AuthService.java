@@ -1,54 +1,54 @@
 package ar.com.greenbundle.haylugar.service;
 
-import ar.com.greenbundle.haylugar.dto.CreateUserData;
-import ar.com.greenbundle.haylugar.dto.SecurePassword;
-import ar.com.greenbundle.haylugar.dto.UserProfile;
-import ar.com.greenbundle.haylugar.entities.UserItem;
-import ar.com.greenbundle.haylugar.exceptions.CreateUserException;
-import ar.com.greenbundle.haylugar.util.EncodeUtil;
-import ar.com.greenbundle.haylugar.util.JwtUtil;
-import ar.com.greenbundle.haylugar.util.PasswordUtil;
+import ar.com.greenbundle.haylugar.dto.UserDto;
+import ar.com.greenbundle.haylugar.dto.UserProfileDto;
+import ar.com.greenbundle.haylugar.exceptions.LoginPasswordException;
+import ar.com.greenbundle.haylugar.util.jwt.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+
+import static ar.com.greenbundle.haylugar.pojo.constants.UserRole.ROLE_USER;
+import static ar.com.greenbundle.haylugar.pojo.constants.UserState.PENDING;
 
 @Service
 public class AuthService {
     @Autowired
     private UserService userService;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private JwtUtil jwtUtil;
 
     public Mono<String> loginUser(String email, String password) {
-        return userService.getUserByEmail(email)
-                .switchIfEmpty(Mono.error(new BadCredentialsException(HttpStatus.UNAUTHORIZED.getReasonPhrase())))
+        return userService.findUserByEmail(email)
                 .map(user -> {
-                    SecurePassword securePassword = new SecurePassword();
-                    securePassword.setHash(EncodeUtil.decodeBase64(user.getPasswordHash().getBytes(StandardCharsets.UTF_8)));
-                    securePassword.setSalt(EncodeUtil.decodeBase64(user.getPasswordSalt().getBytes(StandardCharsets.UTF_8)));
-                    PasswordUtil.verifySecurePassword(securePassword, password);
+                    if(!passwordEncoder.matches(password, user.getPassword()))
+                        return Mono.error(new LoginPasswordException("Invalid password"));
 
-                    return JwtUtil.generateToken(email);
-                });
+                    Map<String, Object> claims = Map.of("roles", user.getRoles());
 
+                    return jwtUtil.generateToken(user.getId(), claims);
+                })
+                .cast(String.class);
     }
 
-    public Mono<UserItem> signUpUser(String email, String password, UserProfile userProfile) {
-        return userService.getUserByEmail(email)
-                .flatMap(__ -> Mono.error(new CreateUserException("Unable to create user, already exists with email")))
-                .switchIfEmpty(Mono.defer(() -> {
-                    SecurePassword securePassword = PasswordUtil.createSecurePassword(password);
+    public Mono<String> signUpUser(String email, String password, UserProfileDto profile) {
 
-                    CreateUserData userData = CreateUserData.builder()
-                            .email(email)
-                            .password(securePassword)
-                            .profile(userProfile)
-                            .build();
+        String securedPassword = passwordEncoder.encode(password);
 
-                    return userService.createUser(userData);
-                }))
-                .cast(UserItem.class);
+        UserDto user = UserDto.builder()
+                .email(email)
+                .password(securedPassword)
+                .profile(profile)
+                .roles(List.of(ROLE_USER))
+                .state(PENDING)
+                .build();
+
+        return userService.registerUser(user);
     }
 }

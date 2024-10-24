@@ -1,7 +1,7 @@
 package ar.com.greenbundle.haylugar.service;
 
-import ar.com.greenbundle.haylugar.dto.Address;
-import ar.com.greenbundle.haylugar.dto.constants.AllowedArea;
+import ar.com.greenbundle.haylugar.pojo.Address;
+import ar.com.greenbundle.haylugar.pojo.constants.AllowedArea;
 import ar.com.greenbundle.haylugar.rest.clients.openstreetmaps.AddressData;
 import ar.com.greenbundle.haylugar.rest.clients.openstreetmaps.OpenStreetMapClient;
 import org.locationtech.jts.geom.Coordinate;
@@ -28,7 +28,7 @@ public class LocationService {
 
         Stream<Polygon> polygons = Arrays.stream(AllowedArea.values()).map(allowedArea -> Arrays.stream(allowedArea.coordinates)
                 .map(coordinate -> new Coordinate(coordinate[0], coordinate[1])).toList())
-                .map(c -> geometryFactory.createLinearRing(c.toArray(new Coordinate[0])))
+                .map(coordinate -> geometryFactory.createLinearRing(coordinate.toArray(new Coordinate[0])))
                 .map(linearRing -> new Polygon(linearRing, null, geometryFactory));
 
         return polygons.noneMatch(polygon -> polygon.contains(point));

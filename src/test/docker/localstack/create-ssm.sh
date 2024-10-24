@@ -28,7 +28,7 @@ printf "NAME"
 printf "%*sSTATUS\n" $((75 - ${#param_name})) ""
 
 
-create_or_update_ssm_parameter "/local/mercadopago/token"                     "value"
+create_or_update_ssm_parameter "/local/mercadopago/token"                     "{your_mp_secret_key}"
 
 echo "SSM operation completed!.."
 echo "----------------------------------------------------------"

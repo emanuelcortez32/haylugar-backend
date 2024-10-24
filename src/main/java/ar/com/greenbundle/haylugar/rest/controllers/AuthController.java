@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
@@ -19,6 +20,7 @@ import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.Aut
 import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.AuthEndpoints.USER_SIGNUP;
 
 @RestController
+@RequestMapping("/api")
 public class AuthController {
     @Autowired
     private AuthService authService;
@@ -39,14 +41,15 @@ public class AuthController {
                 ));
     }
 
+
     @PostMapping(value = USER_SIGNUP, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponseEntity<CreateUserResponse>> createUser(@RequestBody CreateUserRequest request) {
 
         request.validate();
 
         return authService.signUpUser(request.getEmail(), request.getPassword(), request.getProfile())
-                .map(user -> new ResponseEntity<>(CreateUserResponse.builder()
-                        .id(user.getId())
+                .map(id -> new ResponseEntity<>(CreateUserResponse.builder()
+                        .id(id)
                         .success(true)
                         .message("OK")
                         .build(), HttpStatus.CREATED));

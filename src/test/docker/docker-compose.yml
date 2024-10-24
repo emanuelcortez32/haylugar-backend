@@ -16,48 +16,52 @@ services:
       - "/tmp/localstack:/tmp/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
-  mongodb:
-    image: mongodb/mongodb-community-server:6.0-ubi8
+  postgres:
+    image: postgis/postgis:17-3.4
     container_name: hay_lugar_db
     env_file:
       - .env
     environment:
-      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_MULTIPLE_EXTENSIONS=postgis,hstore,postgis_topology,postgis_raster,pgrouting,pgcrypto
+      - RUN_AS_ROOT=true
     ports:
-      - "27017:27017"
+      - "5432:5432"
     volumes:
-      - mongodb-data:/data/db
-      - mongodb-log:/var/log/mongodb/
-      - ./mongo/init.d:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - mongodb_network
+      - postgres_network
 
-  mongo-express:
-    image: mongo-express:latest
-    container_name: mongo-express-hay-lugar
-    restart: always
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_MONGODB_SERVER: 'mongodb'
-      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME}
-      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD}
-    ports:
-      - "8081:8081"
-    networks:
-      - mongodb_network
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_hay_lugar_db
     depends_on:
-      - mongodb
+      - postgres
+    env_file:
+      - .env
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    ports:
+      - "8085:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./postgres/pgadmin/servers.json:/pgadmin4/servers.json
+    networks:
+      - postgres_network
+
 
 volumes:
-  mongodb-data:
+  postgres-data:
     driver: local
-  mongodb-log:
+  pgadmin-data:
     driver: local
 
 networks:
-  mongodb_network:
+  postgres_network:
     driver: bridge

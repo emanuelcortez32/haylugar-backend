@@ -1,91 +1,100 @@
 package ar.com.greenbundle.haylugar.service;
 
-import ar.com.greenbundle.haylugar.dto.Address;
-import ar.com.greenbundle.haylugar.dto.CreateSpotData;
-import ar.com.greenbundle.haylugar.dto.Location;
-import ar.com.greenbundle.haylugar.dto.UpdateSpotData;
-import ar.com.greenbundle.haylugar.entities.SpotItem;
-import ar.com.greenbundle.haylugar.entities.UserItem;
+import ar.com.greenbundle.haylugar.dao.SpotDao;
+import ar.com.greenbundle.haylugar.dao.UserDao;
+import ar.com.greenbundle.haylugar.dto.SpotDto;
+import ar.com.greenbundle.haylugar.dto.UserDto;
 import ar.com.greenbundle.haylugar.exceptions.CreateSpotException;
 import ar.com.greenbundle.haylugar.exceptions.ResourceNotFoundException;
-import ar.com.greenbundle.haylugar.repositories.SpotRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
-import static ar.com.greenbundle.haylugar.dto.constants.SpotState.FREE;
-
+import static ar.com.greenbundle.haylugar.pojo.constants.SpotState.AVAILABLE;
+@Slf4j
 @Service
 public class SpotService {
     @Autowired
-    private SpotRepository spotRepository;
+    private UserDao userDao;
     @Autowired
-    private UserService userService;
+    private SpotDao spotDao;
+
     @Autowired
     private LocationService locationService;
 
-    public Flux<SpotItem> getSpotsByUserEmail(String userEmail) {
-
-        return userService.getUserByEmail(userEmail)
-                .flatMapMany(user -> spotRepository.findSpotsByUserId(user.getId()))
-                .switchIfEmpty(Flux.empty());
+    public Flux<SpotDto> findSpotsByUser(String userId) {
+        return spotDao.getSpotsByUser(userId);
     }
 
-    public Mono<SpotItem> getSpotById(String spotId) {
-        return spotRepository.findById(spotId)
+    public Mono<SpotDto> findSpotByUser(String userId, String spotId) {
+        return spotDao.getSpot(spotId)
+                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Spot not found")))
+                .flatMap(spot -> {
+                    if(!spot.getLandLord().getId().equals(userId))
+                        return Mono.error(new ResourceNotFoundException("Spot not found"));
+
+                    return Mono.just(spot);
+                });
+    }
+
+    public Mono<SpotDto> findSpot(String spotId) {
+        return spotDao.getSpot(spotId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Spot not found")));
     }
 
-    public Mono<SpotItem> createSpotAssociatedToUser(String userEmail, CreateSpotData spotData) {
+    public Mono<String> updateSpot(SpotDto spotDto) {
         int MINIMUM_PRICE_PER_MINUTE = 15;
 
-        if(spotData.getPricePerMinute() <= MINIMUM_PRICE_PER_MINUTE)
+        if(spotDto.getPricePerMinute() <= MINIMUM_PRICE_PER_MINUTE)
             return Mono.error(new CreateSpotException("Spot price per minute must be equal or greater than minimum price"));
 
-        if(locationService.checkIfPointInsideAllowedArea(spotData.getLocation().getLongitude(),
-                spotData.getLocation().getLatitude())) {
+        if(locationService.checkIfPointInsideAllowedArea(spotDto.getLocation().getX(),
+                spotDto.getLocation().getY())) {
             return Mono.error(new CreateSpotException("Spot is not in allowed area"));
         }
 
-        SpotItem spot = SpotItem.builder()
-                .type(spotData.getType())
-                .capacity(spotData.getCapacity())
-                .pricePerMinute(spotData.getPricePerMinute())
-                .photos(spotData.getPhotos())
-                .description(spotData.getDescription())
-                .location(new GeoJsonPoint(spotData.getLocation().getLongitude(), spotData.getLocation().getLatitude()))
-                .spotState(FREE)
-                .build();
-
-        Mono<UserItem> user = userService.getUserByEmail(userEmail);
-        Mono<Address> address = locationService.getAddressFromCoordinate(spot.getLocation().getX(), spot.getLocation().getY());
-
-        return user
-                .doOnNext(u -> spot.setLandLordUserId(u.getId()))
-                .flatMap(__ -> address)
-                .doOnNext(spot::setAddress)
-                .then(spotRepository.save(spot));
+        return spotDao.saveSpot(spotDto)
+                .doOnNext(savedSpot -> locationService.getAddressFromCoordinate(savedSpot.getLocation().getX(), savedSpot.getLocation().getY())
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .doOnError(throwable -> log.warn("The address for the spot[{}] could not be determined : [{}]",
+                                savedSpot.getId(), throwable.getMessage()))
+                        .subscribe(address -> {
+                            savedSpot.setAddress(address);
+                            spotDao.saveSpot(savedSpot)
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .subscribe();
+                        }, throwable -> {}))
+                .map(SpotDto::getId);
     }
 
-    public Mono<SpotItem> updateSpotAssociatedToUser(String userId, String spotId, UpdateSpotData spotData) {
-        return userService.getUserById(userId)
-                .flatMap(user -> spotRepository.findById(spotId)
-                        .flatMap(spot -> {
-                            if(!spot.getLandLordUserId().equals(user.getId()))
-                                return Mono.error(new RuntimeException("Unable to edit spot"));
+    public Mono<String> createSpotForUser(String userId, SpotDto spotDto) {
+        int MINIMUM_PRICE_PER_MINUTE = 15;
 
-                            if(spotData.getSpotState() != null)
-                                spot.setSpotState(spotData.getSpotState());
+        if(spotDto.getPricePerMinute() <= MINIMUM_PRICE_PER_MINUTE)
+            return Mono.error(new CreateSpotException("Spot price per minute must be equal or greater than minimum price"));
 
-                            if(spotData.getDescription() != null)
-                                spot.setDescription(spotData.getDescription());
+        if(locationService.checkIfPointInsideAllowedArea(spotDto.getLocation().getX(),
+                spotDto.getLocation().getY())) {
+            return Mono.error(new CreateSpotException("Spot is not in allowed area"));
+        }
 
-                            if(spotData.getPhotos() != null)
-                                spot.setPhotos(spotData.getPhotos());
+        spotDto.setLandLord(UserDto.builder().id(userId).build());
+        spotDto.setState(AVAILABLE);
 
-                            return spotRepository.save(spot);
-                        }));
+        return spotDao.saveSpot(spotDto)
+                .doOnNext(savedSpot -> locationService.getAddressFromCoordinate(savedSpot.getLocation().getX(), savedSpot.getLocation().getY())
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .doOnError(throwable -> log.warn("The address for the spot[{}] could not be determined : [{}]",
+                                savedSpot.getId(), throwable.getMessage()))
+                        .subscribe(address -> {
+                            savedSpot.setAddress(address);
+                            spotDao.saveSpot(savedSpot)
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .subscribe();
+                        }, throwable -> {}))
+                .map(SpotDto::getId);
     }
 }

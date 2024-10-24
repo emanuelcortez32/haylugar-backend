@@ -1,16 +1,17 @@
 package ar.com.greenbundle.haylugar.service;
 
-import ar.com.greenbundle.haylugar.dto.CreateUserData;
-import ar.com.greenbundle.haylugar.dto.UpdateUserData;
-import ar.com.greenbundle.haylugar.dto.constants.Nationality;
-import ar.com.greenbundle.haylugar.entities.UserItem;
+import ar.com.greenbundle.haylugar.dao.UserDao;
+import ar.com.greenbundle.haylugar.dao.UserProfileDao;
+import ar.com.greenbundle.haylugar.dto.UserDto;
+import ar.com.greenbundle.haylugar.dto.UserProfileDto;
 import ar.com.greenbundle.haylugar.exceptions.CreateUserException;
-import ar.com.greenbundle.haylugar.exceptions.ResourceNotFoundException;
-import ar.com.greenbundle.haylugar.repositories.UserRepository;
-import ar.com.greenbundle.haylugar.util.EncodeUtil;
+import ar.com.greenbundle.haylugar.pojo.constants.Nationality;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -20,39 +21,44 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-import static ar.com.greenbundle.haylugar.dto.constants.Nationality.ARGENTINEAN;
-import static ar.com.greenbundle.haylugar.dto.constants.UserState.RIGHT;
-
+import static ar.com.greenbundle.haylugar.pojo.constants.Nationality.ARGENTINEAN;
+@Slf4j
 @Service
 public class UserService {
-    private final List<Nationality> ALLOWED_NATIONALITIES = List.of(
-            ARGENTINEAN
-    );
+    private final List<Nationality> ALLOWED_NATIONALITIES = List.of(ARGENTINEAN);
     @Autowired
-    private UserRepository userRepository;
+    private UserDao userDao;
+    @Autowired
+    private UserProfileDao userProfileDao;
 
     @Autowired
     private PaymentService paymentService;
 
-    public Mono<UserItem> getUserByEmail(String email) {
-        return userRepository.findUserByEmail(email);
+    public Mono<UserDto> findUserByEmail(String email) {
+        return userDao.getUserByEmail(email)
+                .flatMap(user -> userProfileDao.getProfileByUser(user.getId())
+                        .doOnNext(user::setProfile).then(Mono.just(user)));
     }
 
-    public Mono<UserItem> getUserById(String id) {
-        return userRepository.findById(id);
+    public Mono<UserDto> findUser(String userId) {
+        return userDao.getUser(userId)
+                .flatMap(user -> userProfileDao.getProfileByUser(user.getId())
+                        .doOnNext(user::setProfile).then(Mono.just(user)));
     }
 
-    public Mono<UserItem> createUser(CreateUserData userData) {
+    @Transactional
+    public Mono<String> registerUser(UserDto user) {
         try {
 
-            int LEGAL_AGE = 18;
+            final int LEGAL_AGE = 18;
+            final String DATE_FORMAT = "dd/MM/yyyy";
 
-            if(!ALLOWED_NATIONALITIES.contains(userData.getProfile().getNationality()))
+            if(!ALLOWED_NATIONALITIES.contains(user.getProfile().getNationality()))
                 return Mono.error(new CreateUserException(String.format("Nationality %s is not allowed",
-                        userData.getProfile().getNationality())));
+                        user.getProfile().getNationality())));
 
-            DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-            Date userBirthDate = dateFormat.parse(userData.getProfile().getBirthDate());
+            DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+            Date userBirthDate = dateFormat.parse(user.getProfile().getBirthDate());
             Date today = dateFormat.parse(dateFormat.format(new Date()));
 
             if(userBirthDate.after(today) || userBirthDate.equals(today))
@@ -67,75 +73,32 @@ public class UserService {
             if(!isAgeLegal)
                 return Mono.error(new CreateUserException("User age is less than legal years old"));
 
-            UserItem user = UserItem.builder()
-                    .email(userData.getEmail())
-                    .passwordSalt(EncodeUtil.encodeBase64AsString(userData.getPassword().getSalt()))
-                    .passwordHash(EncodeUtil.encodeBase64AsString(userData.getPassword().getHash()))
-                    .profile(userData.getProfile())
-                    .state(RIGHT)
-                    .build();
+            return userDao.saveUser(user)
+                    .flatMap(savedUser -> {
 
-            return userRepository.insert(user)
-                    .flatMap(userSaved -> paymentService.addCardForUser(userSaved.getId(), "985bb7da7bd9faf833447dba14fa6de1", "123")
-                            .then(Mono.just(userSaved)));
+                        UserProfileDto userProfile = UserProfileDto.builder()
+                                .user(savedUser)
+                                .name(user.getProfile().getName())
+                                .lastName(user.getProfile().getLastName())
+                                .dni(user.getProfile().getDni())
+                                .birthDate(user.getProfile().getBirthDate())
+                                .gender(user.getProfile().getGender())
+                                .nationality(user.getProfile().getNationality())
+                                .build();
 
-        } catch (ParseException e) {
-            return Mono.error(e);
-        }
-    }
-
-    public Mono<UserItem> updateUser(String userEmail, UpdateUserData userData) {
-        try {
-
-            int LEGAL_AGE = 18;
-
-            if(!ALLOWED_NATIONALITIES.contains(userData.getProfile().getNationality()))
-                return Mono.error(new CreateUserException(String.format("Nationality %s is not allowed",
-                        userData.getProfile().getNationality())));
-
-            DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-            Date userBirthDate = dateFormat.parse(userData.getProfile().getBirthDate());
-            Date today = dateFormat.parse(dateFormat.format(new Date()));
-
-            if(userBirthDate.after(today) || userBirthDate.equals(today))
-                return Mono.error(new CreateUserException("User birth date is invalid"));
-
-            Calendar calendar = GregorianCalendar.getInstance();
-
-            calendar.set(Calendar.YEAR, calendar.get(Calendar.YEAR) - LEGAL_AGE);
-
-            boolean isAgeLegal = calendar.getTime().after(userBirthDate);
-
-            if(!isAgeLegal)
-                return Mono.error(new CreateUserException("User age is less than legal years old"));
-
-            return userRepository.findUserByEmail(userEmail)
-                    .switchIfEmpty(Mono.error(new ResourceNotFoundException("User not found")))
-                    .flatMap(user -> {
-                        if(userData.getUserState() != null)
-                            user.setState(user.getState());
-
-                        if(userData.getProfile() != null) {
-                            if(userData.getProfile().getNationality() != null)
-                                user.getProfile().setNationality(userData.getProfile().getNationality());
-
-                            if(userData.getProfile().getName() != null)
-                                user.getProfile().setName(userData.getProfile().getName());
-
-                            if(userData.getProfile().getSurname() != null)
-                                user.getProfile().setSurname(userData.getProfile().getSurname());
-
-                            if(userData.getProfile().getGender() != null)
-                                user.getProfile().setGender(userData.getProfile().getGender());
-
-                            if(userData.getProfile().getDni() != null)
-                                user.getProfile().setDni(userData.getProfile().getDni());
-
-                            if(userData.getProfile().getBirthDate() != null)
-                                user.getProfile().setBirthDate(userData.getProfile().getBirthDate());
-                        }
-
-                        return userRepository.save(user);
+                        return userProfileDao.saveProfile(userProfile)
+                                .doOnNext(profile -> {
+                                    savedUser.setProfile(profile);
+                                    paymentService.createPaymentProfileForUser(savedUser)
+                                            .subscribeOn(Schedulers.boundedElastic())
+                                            .doOnError(throwable -> log.warn("Payment profile for userId[{}] could not be created [{}]",
+                                                    savedUser.getId(), throwable.getMessage()))
+                                            .subscribe(result -> {
+                                                log.info("Payment profile for userId[{}] created with id[{}]",
+                                                        savedUser.getId(), result);
+                                            }, throwable -> {});
+                                })
+                                .then(Mono.just(savedUser.getId()));
                     });
 
         } catch (ParseException e) {

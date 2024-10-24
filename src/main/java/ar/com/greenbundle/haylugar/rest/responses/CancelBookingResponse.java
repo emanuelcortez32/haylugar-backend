@@ -5,17 +5,18 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class CancelBookingResponse extends BookingActionResponse {
-    private String reason;
 
     @Builder
     public CancelBookingResponse(boolean success,
                                  String message,
                                  String reason) {
         super(success, message);
-        this.reason = reason;
+        this.data = Map.of("reason", reason);
     }
 }

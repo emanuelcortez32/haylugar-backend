@@ -1,9 +1,9 @@
 package ar.com.greenbundle.haylugar.rest.responses;
 
-import ar.com.greenbundle.haylugar.dto.Address;
-import ar.com.greenbundle.haylugar.dto.Location;
-import ar.com.greenbundle.haylugar.dto.constants.SpotState;
-import ar.com.greenbundle.haylugar.dto.constants.SpotType;
+import ar.com.greenbundle.haylugar.pojo.Address;
+import ar.com.greenbundle.haylugar.pojo.Location;
+import ar.com.greenbundle.haylugar.pojo.constants.SpotState;
+import ar.com.greenbundle.haylugar.pojo.constants.SpotType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

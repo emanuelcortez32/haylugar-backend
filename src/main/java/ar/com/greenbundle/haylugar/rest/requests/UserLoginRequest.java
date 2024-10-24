@@ -1,6 +1,5 @@
 package ar.com.greenbundle.haylugar.rest.requests;
 
-import ar.com.greenbundle.haylugar.dto.ValidatedBean;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -16,7 +15,7 @@ import static jakarta.validation.constraints.Pattern.Flag.CASE_INSENSITIVE;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = true)
-public class UserLoginRequest extends ValidatedBean {
+public class UserLoginRequest extends ValidatedRequestBean {
     @NotNull(message = "Email is required")
     @Email(message = "Email address is invalid", flags = {CASE_INSENSITIVE})
     private String email;

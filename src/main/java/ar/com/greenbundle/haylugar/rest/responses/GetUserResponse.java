@@ -1,27 +1,25 @@
 package ar.com.greenbundle.haylugar.rest.responses;
 
-import ar.com.greenbundle.haylugar.dto.UserProfile;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class GetUserResponse extends GenericResponse {
-    @JsonProperty("data")
-    private UserProfile profile;
-    private boolean enabled;
-
     @Builder
     public GetUserResponse(boolean success,
                            String message,
-                           UserProfile profile,
+                           UserProfileResponse profile,
                            boolean enabled) {
         super(success, message);
-        this.profile = profile;
-        this.enabled = enabled;
+        this.data = Map.of(
+                "enabled", enabled,
+                "profile", profile
+        );
     }
 }

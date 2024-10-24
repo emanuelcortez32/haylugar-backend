@@ -1,15 +1,14 @@
 package ar.com.greenbundle.haylugar.repositories;
 
-import ar.com.greenbundle.haylugar.entities.SpotItem;
-import org.springframework.data.mongodb.repository.Query;
-import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
+import ar.com.greenbundle.haylugar.entities.SpotEntity;
+import org.springframework.data.r2dbc.repository.Query;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-public interface SpotRepository extends ReactiveMongoRepository<SpotItem, String> {
-    @Query("{landLordUserId:'?0'}")
-    Mono<SpotItem> findSpotByUserId(String userId);
-
-    @Query("{landLordUserId:'?0'}")
-    Flux<SpotItem> findSpotsByUserId(String userId);
+import static ar.com.greenbundle.haylugar.repositories.queries.Queries.Spots.SELECT_SPOTS_BY_LANDLORD_USER_ID;
+@Repository
+public interface SpotRepository extends ReactiveCrudRepository<SpotEntity, String> {
+    @Query(SELECT_SPOTS_BY_LANDLORD_USER_ID)
+    Flux<SpotEntity> findSpotsByLandLordUserId(String landLordUserId);
 }

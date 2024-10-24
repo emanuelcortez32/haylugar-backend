@@ -1,13 +1,28 @@
 package ar.com.greenbundle.haylugar.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.ZoneId;
+
 @Configuration
 public class MainConfig {
+    @Value("${app.representation.timezone}")
+    private String appRepresentationTimeZone;
+
     @Bean
     public ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        objectMapper.registerModule(new JavaTimeModule());
+        return objectMapper;
+    }
+
+    @Bean
+    public ZoneId representationTimeZone() {
+        return ZoneId.of(appRepresentationTimeZone);
     }
 }

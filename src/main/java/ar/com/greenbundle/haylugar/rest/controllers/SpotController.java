@@ -1,35 +1,40 @@
 package ar.com.greenbundle.haylugar.rest.controllers;
 
-import ar.com.greenbundle.haylugar.dto.CreateSpotData;
-import ar.com.greenbundle.haylugar.dto.Location;
+import ar.com.greenbundle.haylugar.dto.SpotDto;
+import ar.com.greenbundle.haylugar.pojo.Location;
 import ar.com.greenbundle.haylugar.rest.requests.CreateSpotRequest;
 import ar.com.greenbundle.haylugar.rest.responses.CreateSpotResponse;
+import ar.com.greenbundle.haylugar.rest.responses.GetUserSpotResponse;
 import ar.com.greenbundle.haylugar.rest.responses.GetUserSpotsResponse;
 import ar.com.greenbundle.haylugar.rest.responses.SpotResponse;
 import ar.com.greenbundle.haylugar.service.SpotService;
-import ar.com.greenbundle.haylugar.util.JwtUtil;
+import io.r2dbc.postgresql.codec.Point;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.SpotEndpoints.CREATE_SPOT;
 import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.SpotEndpoints.GET_SPOT;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.SpotEndpoints.GET_SPOTS;
 
 @RestController
+@RequestMapping("/api")
 public class SpotController {
     @Autowired
     private SpotService spotService;
-    @GetMapping(value = GET_SPOT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<GetUserSpotsResponse>> getSpots(@RequestHeader(name = HttpHeaders.AUTHORIZATION) String authToken) {
-        return spotService.getSpotsByUserEmail(JwtUtil.extractSubjectFromAuthHeader(authToken))
+    @GetMapping(value = GET_SPOTS, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<GetUserSpotsResponse>> getSpots(@AuthenticationPrincipal UserDetails principal) {
+        return spotService.findSpotsByUser(principal.getUsername())
                 .collectList()
                 .map(spots -> ResponseEntity.ok(GetUserSpotsResponse.builder()
                                 .success(true)
@@ -37,37 +42,63 @@ public class SpotController {
                                 .spots(spots.stream().map(spot -> SpotResponse.builder()
                                         .id(spot.getId())
                                         .type(spot.getType())
-                                        .spotState(spot.getSpotState())
+                                        .spotState(spot.getState())
                                         .photos(spot.getPhotos())
                                         .pricePerMinute(spot.getPricePerMinute())
                                         .description(spot.getDescription())
                                         .location(Location.builder()
-                                                .latitude(spot.getLocation().getX())
-                                                .longitude(spot.getLocation().getY())
-                                                .type(spot.getLocation().getType())
+                                                .longitude(spot.getLocation().getX())
+                                                .latitude(spot.getLocation().getY())
+                                                .type("Point")
                                                 .build())
                                         .address(spot.getAddress())
                                         .build()).toList())
                         .build()));
     }
 
+    @GetMapping(value = GET_SPOT, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<GetUserSpotResponse>> getSpot(@AuthenticationPrincipal UserDetails principal,
+                                                             @PathVariable("spot_id") String spotId) {
+        return spotService.findSpotByUser(principal.getUsername(), spotId)
+                .map(spot -> ResponseEntity.ok(GetUserSpotResponse.builder()
+                                .message("OK")
+                                .success(true)
+                                .spotResponse(SpotResponse.builder()
+                                        .id(spot.getId())
+                                        .type(spot.getType())
+                                        .spotState(spot.getState())
+                                        .photos(spot.getPhotos())
+                                        .pricePerMinute(spot.getPricePerMinute())
+                                        .description(spot.getDescription())
+                                        .location(Location.builder()
+                                                .longitude(spot.getLocation().getX())
+                                                .latitude(spot.getLocation().getY())
+                                                .type("Point")
+                                                .build())
+                                        .address(spot.getAddress())
+                                        .build())
+                        .build()));
+
+    }
+
     @PostMapping(value = CREATE_SPOT, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<CreateSpotResponse>> createSpot(@RequestHeader(name = HttpHeaders.AUTHORIZATION) String authToken,
+    public Mono<ResponseEntity<CreateSpotResponse>> createSpot(@AuthenticationPrincipal UserDetails principal,
                                                                @RequestBody CreateSpotRequest request) {
 
         request.validate();
 
-        CreateSpotData spotData = CreateSpotData.builder()
+        SpotDto spot = SpotDto.builder()
                 .type(request.getType())
                 .capacity(request.getCapacity())
-                .location(request.getLocation())
+                .location(Point.of(request.getLocation().getLongitude(), request.getLocation().getLatitude()))
                 .pricePerMinute(request.getPricePerMinute())
                 .description(request.getDescription())
                 .build();
 
-        return spotService.createSpotAssociatedToUser(JwtUtil.extractSubjectFromAuthHeader(authToken), spotData)
-                .map(spot -> new ResponseEntity<>(CreateSpotResponse.builder()
-                        .id(spot.getId())
+
+        return spotService.createSpotForUser(principal.getUsername(), spot)
+                .map(spotId -> new ResponseEntity<>(CreateSpotResponse.builder()
+                        .id(spotId)
                         .message("OK")
                         .success(true)
                         .build(), HttpStatus.CREATED));

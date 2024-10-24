@@ -1,6 +1,6 @@
 package ar.com.greenbundle.haylugar.exceptions;
 
-public class BookingFinishedException extends RuntimeException {
+public class BookingFinishedException extends PerformActionBookingException {
     public BookingFinishedException(String msg) {
         super(msg);
     }

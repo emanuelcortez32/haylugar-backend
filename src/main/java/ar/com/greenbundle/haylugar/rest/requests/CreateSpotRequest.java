@@ -1,8 +1,7 @@
 package ar.com.greenbundle.haylugar.rest.requests;
 
-import ar.com.greenbundle.haylugar.dto.Location;
-import ar.com.greenbundle.haylugar.dto.ValidatedBean;
-import ar.com.greenbundle.haylugar.dto.constants.SpotType;
+import ar.com.greenbundle.haylugar.pojo.Location;
+import ar.com.greenbundle.haylugar.pojo.constants.SpotType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -17,7 +16,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = true)
-public class CreateSpotRequest extends ValidatedBean {
+public class CreateSpotRequest extends ValidatedRequestBean {
     @NotNull(message = "Spot type is required")
     private SpotType type;
     @Min(value = 1, message = "The min spot capacity is 1")
