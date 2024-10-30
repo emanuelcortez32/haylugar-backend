@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.UserEndpoints.GET_USER;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.UserEndpoints.GET_USER;
+
 
 @RestController
 @RequestMapping("/api")

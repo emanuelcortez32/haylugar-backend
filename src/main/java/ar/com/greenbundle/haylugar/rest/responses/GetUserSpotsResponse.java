@@ -11,7 +11,7 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class GetUserSpotsResponse extends GenericResponse {
+public class GetUserSpotsResponse extends ApiResponse {
     @Builder
     public GetUserSpotsResponse(boolean success,
                                 String message,

@@ -13,7 +13,7 @@ import java.util.Map;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CreateUserResponse extends GenericResponse {
+public class CreateUserResponse extends ApiResponse {
     @Builder
     public CreateUserResponse(boolean success,
                               String message,

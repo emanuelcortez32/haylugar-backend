@@ -3,11 +3,13 @@ package ar.com.greenbundle.haylugar.rest.controllers;
 import ar.com.greenbundle.haylugar.dto.SpotDto;
 import ar.com.greenbundle.haylugar.pojo.Location;
 import ar.com.greenbundle.haylugar.rest.requests.CreateSpotRequest;
+import ar.com.greenbundle.haylugar.rest.responses.ApiResponse;
 import ar.com.greenbundle.haylugar.rest.responses.CreateSpotResponse;
 import ar.com.greenbundle.haylugar.rest.responses.GetUserSpotResponse;
 import ar.com.greenbundle.haylugar.rest.responses.GetUserSpotsResponse;
 import ar.com.greenbundle.haylugar.rest.responses.SpotResponse;
 import ar.com.greenbundle.haylugar.service.SpotService;
+import ar.com.greenbundle.haylugar.util.StringUtils;
 import io.r2dbc.postgresql.codec.Point;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,16 +18,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.SpotEndpoints.CREATE_SPOT;
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.SpotEndpoints.GET_SPOT;
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.SpotEndpoints.GET_SPOTS;
+import java.util.function.Function;
+
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.SpotEndpoints.GET_SPOTS;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.SpotEndpoints.POST_SPOT;
+
 
 @RestController
 @RequestMapping("/api")
@@ -33,56 +37,29 @@ public class SpotController {
     @Autowired
     private SpotService spotService;
     @GetMapping(value = GET_SPOTS, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<GetUserSpotsResponse>> getSpots(@AuthenticationPrincipal UserDetails principal) {
+    public Mono<ResponseEntity<ApiResponse>> getSpots(@AuthenticationPrincipal UserDetails principal,
+                                                      @RequestParam(required = false) String spotId) {
+
+        if(!StringUtils.isNullOrEmpty(spotId))
+            return spotService.findSpotByUser(principal.getUsername(), spotId)
+                    .map(mapSpotToResponse)
+                    .map(spotResponse -> ResponseEntity.ok(GetUserSpotResponse.builder()
+                            .message("OK")
+                            .success(true)
+                            .spotResponse(spotResponse)
+                            .build()));
+
         return spotService.findSpotsByUser(principal.getUsername())
                 .collectList()
                 .map(spots -> ResponseEntity.ok(GetUserSpotsResponse.builder()
                                 .success(true)
                                 .message("OK")
-                                .spots(spots.stream().map(spot -> SpotResponse.builder()
-                                        .id(spot.getId())
-                                        .type(spot.getType())
-                                        .spotState(spot.getState())
-                                        .photos(spot.getPhotos())
-                                        .pricePerMinute(spot.getPricePerMinute())
-                                        .description(spot.getDescription())
-                                        .location(Location.builder()
-                                                .longitude(spot.getLocation().getX())
-                                                .latitude(spot.getLocation().getY())
-                                                .type("Point")
-                                                .build())
-                                        .address(spot.getAddress())
-                                        .build()).toList())
+                                .spots(spots.stream().map(mapSpotToResponse).toList())
                         .build()));
     }
 
-    @GetMapping(value = GET_SPOT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<GetUserSpotResponse>> getSpot(@AuthenticationPrincipal UserDetails principal,
-                                                             @PathVariable("spot_id") String spotId) {
-        return spotService.findSpotByUser(principal.getUsername(), spotId)
-                .map(spot -> ResponseEntity.ok(GetUserSpotResponse.builder()
-                                .message("OK")
-                                .success(true)
-                                .spotResponse(SpotResponse.builder()
-                                        .id(spot.getId())
-                                        .type(spot.getType())
-                                        .spotState(spot.getState())
-                                        .photos(spot.getPhotos())
-                                        .pricePerMinute(spot.getPricePerMinute())
-                                        .description(spot.getDescription())
-                                        .location(Location.builder()
-                                                .longitude(spot.getLocation().getX())
-                                                .latitude(spot.getLocation().getY())
-                                                .type("Point")
-                                                .build())
-                                        .address(spot.getAddress())
-                                        .build())
-                        .build()));
-
-    }
-
-    @PostMapping(value = CREATE_SPOT, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<CreateSpotResponse>> createSpot(@AuthenticationPrincipal UserDetails principal,
+    @PostMapping(value = POST_SPOT, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<ApiResponse>> createSpot(@AuthenticationPrincipal UserDetails principal,
                                                                @RequestBody CreateSpotRequest request) {
 
         request.validate();
@@ -103,4 +80,19 @@ public class SpotController {
                         .success(true)
                         .build(), HttpStatus.CREATED));
     }
+
+    private final Function<SpotDto, SpotResponse> mapSpotToResponse = spot -> SpotResponse.builder()
+            .id(spot.getId())
+            .type(spot.getType())
+            .spotState(spot.getState())
+            .photos(spot.getPhotos())
+            .pricePerMinute(spot.getPricePerMinute())
+            .description(spot.getDescription())
+            .location(Location.builder()
+                    .longitude(spot.getLocation().getX())
+                    .latitude(spot.getLocation().getY())
+                    .type("Point")
+                    .build())
+            .address(spot.getAddress())
+            .build();
 }

@@ -20,15 +20,16 @@ import static ar.com.greenbundle.haylugar.pojo.constants.PaymentProvider.MERCADO
 @AllArgsConstructor
 public class MercadoPagoProvider implements PaymentProvider {
     private final MercadoPagoClient mercadoPagoClient;
+
     @Override
     public Payment createPayment(String customerId, String customerEmail, String cardToken, double amount) {
-        ThirdPartyClientResponse createPayment = mercadoPagoClient.createPayment(customerId, customerEmail,
-                cardToken, amount);
+        ThirdPartyClientResponse<com.mercadopago.resources.payment.Payment> createPayment = mercadoPagoClient
+                .createPayment(customerId, customerEmail, cardToken, amount);
 
         if(!createPayment.isSuccess())
-            throw new PaymentProcessException((String) createPayment.getData());
+            throw new PaymentProcessException("Payment could not be created");
 
-        com.mercadopago.resources.payment.Payment payment = (com.mercadopago.resources.payment.Payment) createPayment.getData();
+        com.mercadopago.resources.payment.Payment payment = createPayment.getData();
 
         BigDecimal totalPaidAmount = payment.getTransactionDetails().getTotalPaidAmount();
         BigDecimal netReceivedAmount = payment.getTransactionDetails().getNetReceivedAmount();
@@ -63,15 +64,16 @@ public class MercadoPagoProvider implements PaymentProvider {
 
     @Override
     public Customer searchCustomer(String customerEmail) {
-        ThirdPartyClientResponse searchCustomer = mercadoPagoClient.searchCustomerByEmail(customerEmail);
+        ThirdPartyClientResponse<com.mercadopago.resources.customer.Customer> searchCustomer = mercadoPagoClient
+                .searchCustomerByEmail(customerEmail);
 
         if(!searchCustomer.isSuccess())
-            throw new PaymentProcessException((String) searchCustomer.getData());
+            throw new PaymentProcessException("An error occurred while trying to search for the customer");
 
         if(searchCustomer.getData() == null)
             return null;
 
-        com.mercadopago.resources.customer.Customer customer = (com.mercadopago.resources.customer.Customer) searchCustomer.getData();
+        com.mercadopago.resources.customer.Customer customer = searchCustomer.getData();
 
         List<UserPaymentCardDto> cards = customer.getCards().stream()
                 .map(card -> UserPaymentCardDto.builder()
@@ -101,12 +103,13 @@ public class MercadoPagoProvider implements PaymentProvider {
 
     @Override
     public Customer createCustomer(String name, String lastName, String email, String dniNumber) {
-        ThirdPartyClientResponse customerRequest = mercadoPagoClient.createCustomer(name, lastName, email, dniNumber);
+        ThirdPartyClientResponse<com.mercadopago.resources.customer.Customer> customerRequest = mercadoPagoClient
+                .createCustomer(name, lastName, email, dniNumber);
 
         if(!customerRequest.isSuccess())
-            throw new PaymentProcessException((String) customerRequest.getData());
+            throw new PaymentProcessException("An error occurred while trying to create customer");
 
-        com.mercadopago.resources.customer.Customer customer = (com.mercadopago.resources.customer.Customer) customerRequest.getData();
+        com.mercadopago.resources.customer.Customer customer = customerRequest.getData();
 
         return Customer.builder()
                 .id(customer.getId())

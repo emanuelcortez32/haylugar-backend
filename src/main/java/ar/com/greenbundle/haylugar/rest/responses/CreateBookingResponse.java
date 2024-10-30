@@ -12,7 +12,7 @@ import java.util.Map;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CreateBookingResponse extends GenericResponse {
+public class CreateBookingResponse extends ApiResponse {
     @Builder
     public CreateBookingResponse(boolean success,
                               String message,

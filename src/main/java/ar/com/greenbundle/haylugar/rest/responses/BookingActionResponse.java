@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class BookingActionResponse extends GenericResponse {
+public class BookingActionResponse extends ApiResponse {
     public BookingActionResponse(boolean success,
                                  String message) {
         super(success, message);

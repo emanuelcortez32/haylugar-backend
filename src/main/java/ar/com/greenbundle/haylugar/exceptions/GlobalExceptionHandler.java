@@ -1,5 +1,6 @@
 package ar.com.greenbundle.haylugar.exceptions;
 
+import ar.com.greenbundle.haylugar.util.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -39,9 +40,11 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
             Map.entry(BadRequestBodyException.class.getCanonicalName(), HttpStatus.BAD_REQUEST),
             Map.entry(PaymentProcessException.class.getCanonicalName(), HttpStatus.PAYMENT_REQUIRED),
             Map.entry(CreateBookingException.class.getCanonicalName(), HttpStatus.CONFLICT),
+            Map.entry(SpotCapacityExceeded.class.getCanonicalName(), HttpStatus.CONFLICT),
             Map.entry(DataIntegrityViolationException.class.getCanonicalName(), HttpStatus.BAD_REQUEST),
             Map.entry(ExpiredJwtException.class.getCanonicalName(), HttpStatus.UNAUTHORIZED),
             Map.entry(SignatureException.class.getCanonicalName(), HttpStatus.UNAUTHORIZED),
+            Map.entry(FeatureException.class.getCanonicalName(), HttpStatus.CONFLICT),
             Map.entry("io.r2dbc.postgresql.ExceptionFactory.PostgresqlDataIntegrityViolationException", HttpStatus.BAD_REQUEST)
     );
 
@@ -49,7 +52,8 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
         String exceptionCauseName = ex.getCause() != null ? ex.getCause().getClass().getCanonicalName() : ex.getClass().getCanonicalName();
         HttpStatus status = HTTP_STATUS_EXCEPTION_MAP.getOrDefault(exceptionCauseName, HttpStatus.INTERNAL_SERVER_ERROR);
-        String msgError = status.getReasonPhrase();
+        String reason = status.getReasonPhrase();
+        String msgError = !StringUtils.isNullOrEmpty(ex.getMessage()) ? ex.getMessage() : "Error";
 
         log.debug("GlobalExceptionHandler : catch exception [{}] with message [{}], forward HTTP status code [{}]",
                 exceptionCauseName, ex.getMessage(), status);
@@ -69,7 +73,10 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
         return exchange.getResponse().writeWith(Mono.fromSupplier(() -> {
             DataBufferFactory bufferFactory = exchange.getResponse().bufferFactory();
             try {
-                return bufferFactory.wrap(objectMapper.writeValueAsBytes(Map.of("success",false, "message", msgError)));
+                return bufferFactory.wrap(objectMapper.writeValueAsBytes(Map.of(
+                        "reason", reason,
+                        "success",false,
+                        "message", msgError)));
             } catch (Exception e) {
                 return bufferFactory.wrap(new byte[0]);
             }

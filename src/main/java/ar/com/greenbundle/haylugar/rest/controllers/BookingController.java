@@ -4,6 +4,7 @@ import ar.com.greenbundle.haylugar.dto.BookingDto;
 import ar.com.greenbundle.haylugar.dto.PaymentDto;
 import ar.com.greenbundle.haylugar.dto.SpotDto;
 import ar.com.greenbundle.haylugar.rest.requests.CreateBookingRequest;
+import ar.com.greenbundle.haylugar.rest.responses.ApiResponse;
 import ar.com.greenbundle.haylugar.rest.responses.BookingActionResponse;
 import ar.com.greenbundle.haylugar.rest.responses.BookingResponse;
 import ar.com.greenbundle.haylugar.rest.responses.CancelBookingResponse;
@@ -13,6 +14,7 @@ import ar.com.greenbundle.haylugar.rest.responses.GetUserBookingResponse;
 import ar.com.greenbundle.haylugar.rest.responses.GetUserBookingsResponse;
 import ar.com.greenbundle.haylugar.rest.responses.StartBookingResponse;
 import ar.com.greenbundle.haylugar.service.BookingService;
+import ar.com.greenbundle.haylugar.util.StringUtils;
 import ar.com.greenbundle.haylugar.util.time.TimeZoneUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,7 +23,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,10 +32,10 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.function.Function;
 
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.BookingEndpoints.CREATE_BOOKING;
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.BookingEndpoints.GET_BOOKING;
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.BookingEndpoints.GET_BOOKINGS;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.BookingEndpoints.GET_BOOKINGS;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.BookingEndpoints.POST_BOOKING;
 
 @RestController
 @RequestMapping("/api")
@@ -45,54 +46,29 @@ public class BookingController {
     private BookingService bookingService;
 
     @GetMapping(value = GET_BOOKINGS, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<GetUserBookingsResponse>> getBookings(@AuthenticationPrincipal UserDetails principal) {
+    public Mono<ResponseEntity<ApiResponse>> getBookings(@AuthenticationPrincipal UserDetails principal,
+                                                         @RequestParam(required = false) String bookingId) {
+
+        if(!StringUtils.isNullOrEmpty(bookingId))
+            return bookingService.findBookingByUser(principal.getUsername(), bookingId)
+                    .map(mapBookingToResponse)
+                    .map(bookingResponse -> ResponseEntity.ok(GetUserBookingResponse.builder()
+                            .success(true)
+                            .message("OK")
+                            .bookingResponse(bookingResponse)
+                            .build()));
+
         return bookingService.findBookingsByUser(principal.getUsername())
                 .collectList()
                 .map(bookings -> ResponseEntity.ok(GetUserBookingsResponse.builder()
                                 .success(true)
                                 .message("OK")
-                                .bookings(bookings.stream().map(booking -> BookingResponse.builder()
-                                        .id(booking.getId())
-                                        .spotId(booking.getSpot().getId())
-                                        .paymentId(booking.getPayment().getId())
-                                        .state(booking.getState())
-                                        .startDate(TimeZoneUtils.representationDateTimeUTCToZone(booking.getStartDate(),
-                                                representationTimeZone))
-                                        .startTime(TimeZoneUtils.representationTimeUTCToZone(LocalTime.parse(booking.getStartTime()),
-                                                representationTimeZone))
-                                        .endDate(TimeZoneUtils.representationDateTimeUTCToZone(booking.getEndDate(),
-                                                representationTimeZone))
-                                        .endTime(TimeZoneUtils.representationTimeUTCToZone(booking.getEndTime() == null ? null :
-                                                        LocalTime.parse(booking.getEndTime()),
-                                                representationTimeZone))
-                                        .totalMinutes(booking.getTotalMinutes())
-                                        .userAs(booking.getBookingUserAs())
-                                        .build()).toList())
+                                .bookings(bookings.stream().map(mapBookingToResponse).toList())
                         .build()));
     }
 
-    @GetMapping(value = GET_BOOKING, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<GetUserBookingResponse>> getBooking(@AuthenticationPrincipal UserDetails principal,
-                                                                   @PathVariable(name = "booking_id") String bookingId) {
-        return bookingService.findBookingByUser(principal.getUsername(), bookingId)
-                .map(booking -> ResponseEntity.ok(GetUserBookingResponse.builder()
-                                .success(true)
-                                .message("OK")
-                                .bookingResponse(BookingResponse.builder()
-                                        .id(booking.getId())
-                                        .spotId(booking.getSpot().getId())
-                                        .paymentId(booking.getPayment().getId())
-                                        .state(booking.getState())
-                                        .startTime(booking.getStartTime())
-                                        .endTime(booking.getEndTime())
-                                        .totalMinutes(booking.getTotalMinutes())
-                                        .userAs(booking.getBookingUserAs())
-                                        .build())
-                        .build()));
-    }
-
-    @PostMapping(value = GET_BOOKING, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<BookingActionResponse>> performActionOnBooking(@PathVariable(name = "booking_id") String bookingId,
+    @PostMapping(value = POST_BOOKING, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<BookingActionResponse>> performActionOnBooking(@RequestParam String bookingId,
                                                                               @RequestParam String action) {
         return bookingService.performActionOnBooking(bookingId, action)
                 .map(booking -> switch (action) {
@@ -116,7 +92,7 @@ public class BookingController {
                 });
     }
 
-    @PostMapping(value = CREATE_BOOKING, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = POST_BOOKING, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponseEntity<CreateBookingResponse>> createBooking(@AuthenticationPrincipal UserDetails principal,
                                                                      @RequestBody CreateBookingRequest request) {
 
@@ -135,4 +111,22 @@ public class BookingController {
                         .id(bookingId)
                         .build(), HttpStatus.CREATED));
     }
+
+    private final Function<BookingDto, BookingResponse> mapBookingToResponse = booking -> BookingResponse.builder()
+            .id(booking.getId())
+            .spotId(booking.getSpot().getId())
+            .paymentId(booking.getPayment().getId())
+            .state(booking.getState())
+            .startDate(TimeZoneUtils.representationDateTimeUTCToZone(booking.getStartDate(),
+                    representationTimeZone))
+            .startTime(TimeZoneUtils.representationTimeUTCToZone(LocalTime.parse(booking.getStartTime()),
+                    representationTimeZone))
+            .endDate(TimeZoneUtils.representationDateTimeUTCToZone(booking.getEndDate(),
+                    representationTimeZone))
+            .endTime(TimeZoneUtils.representationTimeUTCToZone(booking.getEndTime() == null ? null :
+                            LocalTime.parse(booking.getEndTime()),
+                    representationTimeZone))
+            .totalMinutes(booking.getTotalMinutes())
+            .userAs(booking.getBookingUserAs())
+            .build();
 }

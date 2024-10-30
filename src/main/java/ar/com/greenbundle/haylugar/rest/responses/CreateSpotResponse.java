@@ -12,7 +12,7 @@ import java.util.Map;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CreateSpotResponse extends GenericResponse {
+public class CreateSpotResponse extends ApiResponse {
     @Builder
     public CreateSpotResponse(boolean success,
                               String message,

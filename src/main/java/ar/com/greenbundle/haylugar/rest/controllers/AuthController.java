@@ -2,6 +2,7 @@ package ar.com.greenbundle.haylugar.rest.controllers;
 
 import ar.com.greenbundle.haylugar.rest.requests.CreateUserRequest;
 import ar.com.greenbundle.haylugar.rest.requests.UserLoginRequest;
+import ar.com.greenbundle.haylugar.rest.responses.ApiResponse;
 import ar.com.greenbundle.haylugar.rest.responses.CreateUserResponse;
 import ar.com.greenbundle.haylugar.rest.responses.UserLoginResponse;
 import ar.com.greenbundle.haylugar.service.AuthService;
@@ -16,8 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.AuthEndpoints.USER_LOGIN;
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.AuthEndpoints.USER_SIGNUP;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.GlobalEndpoints.AuthEndpoints.USER_LOGIN;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.GlobalEndpoints.AuthEndpoints.USER_SIGNUP;
 
 @RestController
 @RequestMapping("/api")
@@ -28,7 +29,7 @@ public class AuthController {
     private Validator validator;
 
     @PostMapping(value = USER_LOGIN, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<UserLoginResponse>> userLogin(@RequestBody UserLoginRequest request) {
+    public Mono<ResponseEntity<ApiResponse>> userLogin(@RequestBody UserLoginRequest request) {
 
         request.validate();
 
@@ -43,7 +44,7 @@ public class AuthController {
 
 
     @PostMapping(value = USER_SIGNUP, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<CreateUserResponse>> createUser(@RequestBody CreateUserRequest request) {
+    public Mono<ResponseEntity<ApiResponse>> createUser(@RequestBody CreateUserRequest request) {
 
         request.validate();
 

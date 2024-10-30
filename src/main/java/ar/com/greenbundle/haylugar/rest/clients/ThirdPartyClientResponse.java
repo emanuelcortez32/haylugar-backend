@@ -10,8 +10,8 @@ import org.springframework.http.HttpStatusCode;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ThirdPartyClientResponse {
+public class ThirdPartyClientResponse<T> {
     private HttpStatusCode statusCode;
     private boolean success;
-    private Object data;
+    private T data;
 }

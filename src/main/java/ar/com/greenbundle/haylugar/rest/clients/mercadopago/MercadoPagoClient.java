@@ -4,24 +4,25 @@ import ar.com.greenbundle.haylugar.rest.clients.ThirdPartyClientResponse;
 import com.mercadopago.client.cardtoken.CardTokenClient;
 import com.mercadopago.client.common.IdentificationRequest;
 import com.mercadopago.client.customer.CustomerCardClient;
-import com.mercadopago.client.customer.CustomerCardCreateRequest;
 import com.mercadopago.client.customer.CustomerClient;
 import com.mercadopago.client.customer.CustomerRequest;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentCreateRequest;
 import com.mercadopago.client.payment.PaymentPayerRequest;
 import com.mercadopago.exceptions.MPApiException;
-import com.mercadopago.exceptions.MPException;
 import com.mercadopago.net.MPResultsResourcesPage;
 import com.mercadopago.net.MPSearchRequest;
 import com.mercadopago.resources.customer.Customer;
-import com.mercadopago.resources.customer.CustomerCard;
 import com.mercadopago.resources.payment.Payment;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.concurrent.Callable;
+
+@Slf4j
 @AllArgsConstructor
 public class MercadoPagoClient {
     private final PaymentClient paymentClient;
@@ -29,11 +30,9 @@ public class MercadoPagoClient {
     private final CustomerCardClient customerCardClient;
     private final CardTokenClient cardTokenClient;
 
-    public ThirdPartyClientResponse createCustomer(String name, String lastName, String email,
+    public ThirdPartyClientResponse<Customer> createCustomer(String name, String lastName, String email,
                                                    String dniNumber) {
-        ThirdPartyClientResponse thirdPartyClientResponse = new ThirdPartyClientResponse();
-
-        try {
+        return executeClientRequest(() -> {
             CustomerRequest customerRequest = CustomerRequest.builder()
                     .email(email)
                     .firstName(name)
@@ -44,34 +43,13 @@ public class MercadoPagoClient {
                             .build())
                     .build();
 
-            Customer customer = customerClient.create(customerRequest);
-
-            thirdPartyClientResponse.setSuccess(true);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.OK);
-            thirdPartyClientResponse.setData(customer);
-        } catch (MPApiException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.PAYMENT_REQUIRED);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Status: %s, Content: %s%n",
-                    ex.getApiResponse().getStatusCode(), ex.getApiResponse().getContent()));
-
-        } catch (MPException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.BAD_GATEWAY);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Content: %s%n",
-                    ex.getMessage()));
-        }
-
-        return thirdPartyClientResponse;
+            return customerClient.create(customerRequest);
+        }, new ThirdPartyClientResponse<>());
     }
 
-    public ThirdPartyClientResponse searchCustomerByEmail(String customerEmail) {
-        ThirdPartyClientResponse thirdPartyClientResponse = new ThirdPartyClientResponse();
+    public ThirdPartyClientResponse<Customer> searchCustomerByEmail(String customerEmail) {
 
-        try{
-            thirdPartyClientResponse.setSuccess(true);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.OK);
-
+        return executeClientRequest(() -> {
             MPSearchRequest searchRequest = MPSearchRequest.builder()
                     .limit(10)
                     .offset(10)
@@ -81,70 +59,25 @@ public class MercadoPagoClient {
             MPResultsResourcesPage<Customer> customerSearchResult = customerClient.search(searchRequest);
 
             if(customerSearchResult.getResults().size() == 1) {
-                thirdPartyClientResponse.setData(customerSearchResult.getResults().get(0));
+                return customerSearchResult.getResults().get(0);
             } else {
-                thirdPartyClientResponse.setData(customerSearchResult.getResults()
+                return customerSearchResult.getResults()
                         .stream()
                         .filter(customer -> customer.getEmail().equals(customerEmail))
                         .findFirst()
-                        .orElse(null));
+                        .orElse(null);
             }
 
-        } catch (MPApiException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.PAYMENT_REQUIRED);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Status: %s, Content: %s%n",
-                    ex.getApiResponse().getStatusCode(), ex.getApiResponse().getContent()));
-
-        } catch (MPException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.BAD_GATEWAY);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Content: %s%n",
-                    ex.getMessage()));
-        }
-
-        return thirdPartyClientResponse;
+        }, new ThirdPartyClientResponse<>());
     }
 
-    public ThirdPartyClientResponse addCardToCustomer(String customerId, String tokenCard) {
-        ThirdPartyClientResponse thirdPartyClientResponse = new ThirdPartyClientResponse();
-
-        try {
-            CustomerCardCreateRequest customerCardCreateRequest = CustomerCardCreateRequest.builder()
-                    .token(tokenCard)
-                    .build();
-
-            CustomerCard customerCard = customerCardClient.create(customerId, customerCardCreateRequest);
-
-            thirdPartyClientResponse.setSuccess(true);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.OK);
-            thirdPartyClientResponse.setData(customerCard);
-
-        } catch (MPApiException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.PAYMENT_REQUIRED);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Status: %s, Content: %s%n",
-                    ex.getApiResponse().getStatusCode(), ex.getApiResponse().getContent()));
-
-        } catch (MPException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.BAD_GATEWAY);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Content: %s%n",
-                    ex.getMessage()));
-        }
-
-        return thirdPartyClientResponse;
-    }
-
-    public ThirdPartyClientResponse createPayment(String customerId, String customerEmail,
+    public ThirdPartyClientResponse<Payment> createPayment(String customerId, String customerEmail,
                                                   String cardToken, double amount) {
         final String DESCRIPTION = "Pago por uso de HayLugar Spot";
         final String STATEMENT_DESCRIPTOR = "MERCADOPAGO_HAYLUGAR";
         final int QUOTAS = 1;
 
-        ThirdPartyClientResponse thirdPartyClientResponse = new ThirdPartyClientResponse();
-
-        try {
+        return executeClientRequest(() -> {
             PaymentPayerRequest paymentPayerRequest = PaymentPayerRequest.builder()
                     .id(customerId)
                     .email(customerEmail)
@@ -160,142 +93,30 @@ public class MercadoPagoClient {
                     .payer(paymentPayerRequest)
                     .build();
 
-            Payment payment = paymentClient.create(paymentRequest);
-
-            thirdPartyClientResponse.setSuccess(true);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.OK);
-            thirdPartyClientResponse.setData(payment);
-
-        } catch (MPApiException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.PAYMENT_REQUIRED);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Status: %s, Content: %s%n",
-                    ex.getApiResponse().getStatusCode(), ex.getApiResponse().getContent()));
-
-        } catch (MPException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.BAD_GATEWAY);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Content: %s%n",
-                    ex.getMessage()));
-        }
-
-        return thirdPartyClientResponse;
+            return paymentClient.create(paymentRequest);
+        }, new ThirdPartyClientResponse<>());
     }
 
-    /*
 
-    public ThirdPartyClientResponse getCustomer(String customerId) {
-        ThirdPartyClientResponse thirdPartyClientResponse = new ThirdPartyClientResponse();
-
+    private <T> ThirdPartyClientResponse<T> executeClientRequest(Callable<T> request, ThirdPartyClientResponse<T> response) {
         try {
-            Customer customer = customerClient.get(customerId);
-
-            thirdPartyClientResponse.setSuccess(true);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.OK);
-            thirdPartyClientResponse.setData(customer);
-
-        } catch (MPApiException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.PAYMENT_REQUIRED);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Status: %s, Content: %s%n",
-                    ex.getApiResponse().getStatusCode(), ex.getApiResponse().getContent()));
-
-        } catch (MPException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.BAD_GATEWAY);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Content: %s%n",
-                    ex.getMessage()));
-        }
-
-        return thirdPartyClientResponse;
-    }
-
-    public ThirdPartyClientResponse getCardCustomer(String customerId, String cardId) {
-        ThirdPartyClientResponse thirdPartyClientResponse = new ThirdPartyClientResponse();
-
-        try {
-            CustomerCard customerCard = customerCardClient.get(customerId, cardId);
-
-            thirdPartyClientResponse.setSuccess(true);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.OK);
-            thirdPartyClientResponse.setData(customerCard);
+            T result = request.call();
+            response.setSuccess(true);
+            response.setStatusCode(HttpStatus.OK);
+            response.setData(result);
 
         } catch (MPApiException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.PAYMENT_REQUIRED);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Status: %s, Content: %s%n",
-                    ex.getApiResponse().getStatusCode(), ex.getApiResponse().getContent()));
+            log.error("m=executeClientRequest : MPApiException Error ! [{}] [{}]", ex.getStatusCode(), ex.getMessage());
 
-        } catch (MPException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.BAD_GATEWAY);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Content: %s%n",
-                    ex.getMessage()));
+            response.setSuccess(false);
+            response.setStatusCode(HttpStatus.valueOf(ex.getStatusCode()));
+
+        } catch (Exception ex) {
+            log.error("m=executeClientRequest : A unknown Error occurred ! [{}]", ex.getMessage());
+            response.setSuccess(false);
+            response.setStatusCode(HttpStatus.BAD_GATEWAY);
         }
-
-        return thirdPartyClientResponse;
+        return response;
     }
 
-    public ThirdPartyClientResponse createCardToken(String customerId, String cardId, String cardSecurityCode) {
-        ThirdPartyClientResponse thirdPartyClientResponse = new ThirdPartyClientResponse();
-
-        try {
-
-            CardTokenRequest cardTokenRequest = CardTokenRequest.builder()
-                    .cardId(cardId)
-                    .customerId(customerId)
-                    .securityCode(cardSecurityCode)
-                    .build();
-
-            CardToken cardToken = cardTokenClient.create(cardTokenRequest);
-
-            thirdPartyClientResponse.setSuccess(true);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.OK);
-            thirdPartyClientResponse.setData(cardToken);
-
-        } catch (MPApiException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.PAYMENT_REQUIRED);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Status: %s, Content: %s%n",
-                    ex.getApiResponse().getStatusCode(), ex.getApiResponse().getContent()));
-
-        } catch (MPException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.BAD_GATEWAY);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Content: %s%n",
-                    ex.getMessage()));
-        }
-
-        return thirdPartyClientResponse;
-    }
-
-    public ThirdPartyClientResponse getCardToken(String cardTokenId) {
-        ThirdPartyClientResponse thirdPartyClientResponse = new ThirdPartyClientResponse();
-
-        try {
-            CardToken cardToken = cardTokenClient.get(cardTokenId);
-
-            thirdPartyClientResponse.setSuccess(true);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.OK);
-            thirdPartyClientResponse.setData(cardToken);
-
-        } catch (MPApiException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.PAYMENT_REQUIRED);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Status: %s, Content: %s%n",
-                    ex.getApiResponse().getStatusCode(), ex.getApiResponse().getContent()));
-
-        } catch (MPException ex) {
-            thirdPartyClientResponse.setSuccess(false);
-            thirdPartyClientResponse.setStatusCode(HttpStatus.BAD_GATEWAY);
-            thirdPartyClientResponse.setData(String.format("MercadoPago Error. Content: %s%n",
-                    ex.getMessage()));
-        }
-
-        return thirdPartyClientResponse;
-    }
-
-
-
-     */
 }

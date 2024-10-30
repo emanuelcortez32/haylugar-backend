@@ -13,7 +13,7 @@ import java.util.Map;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class GetLocationResponse extends GenericResponse {
+public class GetLocationResponse extends ApiResponse {
     @Builder
     public GetLocationResponse(boolean success,
                                String message,

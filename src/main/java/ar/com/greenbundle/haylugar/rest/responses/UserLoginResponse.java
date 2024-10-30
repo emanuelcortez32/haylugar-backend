@@ -10,7 +10,7 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class UserLoginResponse extends GenericResponse {
+public class UserLoginResponse extends ApiResponse {
     @Builder
     public UserLoginResponse(boolean success,
                              String message,

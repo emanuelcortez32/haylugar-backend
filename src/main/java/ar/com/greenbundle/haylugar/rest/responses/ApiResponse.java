@@ -9,12 +9,12 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-abstract class GenericResponse {
+public abstract class ApiResponse {
     private boolean success;
     private String message;
     protected Map<String, ?> data;
 
-    public GenericResponse(boolean success, String message) {
+    public ApiResponse(boolean success, String message) {
         this.success = success;
         this.message = message;
     }
