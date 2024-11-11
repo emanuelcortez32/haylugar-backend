@@ -15,11 +15,13 @@ public class FinishBookingResponse extends BookingActionResponse {
     public FinishBookingResponse(boolean success,
                                  String message,
                                  long totalMinutes,
+                                 String endTime,
                                  String paymentId) {
         super(success, message);
         this.data = Map.of(
                 "paymentId", paymentId,
-                "totalMinutes", totalMinutes
+                "totalMinutes", totalMinutes,
+                "endTime", endTime
         );
     }
 }

@@ -41,8 +41,8 @@ public class PaymentEntity extends GenericEntity {
     private List<PaymentTransactionDetail> transactionDetails;
 
     @Builder
-    public PaymentEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, String referenceId, PaymentMethod method, PaymentProvider provider, double totalPrice, double providerAmount, double platformAmount, double userNetAmount, Currency currency, PaymentStatus lastStatus, List<PaymentTransactionDetail> transactionDetails) {
-        super(id, createdAt, updatedAt, version);
+    public PaymentEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String referenceId, PaymentMethod method, PaymentProvider provider, double totalPrice, double providerAmount, double platformAmount, double userNetAmount, Currency currency, PaymentStatus lastStatus, List<PaymentTransactionDetail> transactionDetails) {
+        super(id, createdAt, updatedAt, version, deleted);
         this.referenceId = referenceId;
         this.method = method;
         this.provider = provider;

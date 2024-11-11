@@ -20,6 +20,7 @@ public class BookingDto extends EntityDto {
     private UserDto spotOwner;
     private SpotDto spot;
     private PaymentDto payment;
+    private UserVehicleDto vehicle;
     private LocalDateTime startDate;
     private String startTime;
     private LocalDateTime endDate;
@@ -29,12 +30,13 @@ public class BookingDto extends EntityDto {
     private BookingUserAs bookingUserAs;
 
     @Builder
-    public BookingDto(String id, LocalDateTime createdAt, Long version, UserDto client, UserDto spotOwner, SpotDto spot, PaymentDto payment, LocalDateTime startDate, String startTime, LocalDateTime endDate, String endTime, long totalMinutes, BookingState state, BookingUserAs bookingUserAs) {
+    public BookingDto(String id, LocalDateTime createdAt, Long version, UserDto client, UserDto spotOwner, SpotDto spot, PaymentDto payment, UserVehicleDto vehicle, LocalDateTime startDate, String startTime, LocalDateTime endDate, String endTime, long totalMinutes, BookingState state, BookingUserAs bookingUserAs) {
         super(id, createdAt, version);
         this.client = client;
         this.spotOwner = spotOwner;
         this.spot = spot;
         this.payment = payment;
+        this.vehicle = vehicle;
         this.startDate = startDate;
         this.startTime = startTime;
         this.endDate = endDate;
@@ -50,6 +52,7 @@ public class BookingDto extends EntityDto {
                 .spotOwner(UserDto.builder().id(entity.getSpotOwnerId()).build())
                 .client(UserDto.builder().id(entity.getClientUserId()).build())
                 .payment(PaymentDto.builder().id(entity.getPaymentId()).build())
+                .vehicle(UserVehicleDto.builder().id(entity.getVehicleId()).build())
                 .spot(SpotDto.builder().id(entity.getSpotId()).build())
                 .startTime(entity.getStartTime())
                 .endTime(entity.getEndTime())

@@ -9,6 +9,7 @@ public enum UserState {
     BLOCKED_BY_FRAUD(false, "User is blocked due fraud reason"),
     BLOCKED_BY_CONFLICT(false, "User is blocked due conflict"),
     INACTIVE(false, "User is inactive for some reason"),
+    CLOSED(false, "User account is closed"),
     UNKNOWN(false, "User state is unknown, must be checked");
 
     public final boolean enabled;

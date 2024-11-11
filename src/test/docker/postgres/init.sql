@@ -8,7 +8,24 @@ CREATE TABLE IF NOT EXISTS users (
     roles TEXT[] DEFAULT ARRAY['ROLE_USER']::TEXT[] NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS user_vehicles (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id VARCHAR(255) NOT NULL,
+    brand VARCHAR(50) NOT NULL,
+    model VARCHAR(50) NOT NULL,
+    patent VARCHAR(50) NOT NULL UNIQUE,
+    year VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    size VARCHAR(50) NOT NULL,
+    default_vehicle BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS user_profiles (
@@ -22,16 +39,18 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     nationality VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS user_payment_profiles (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id VARCHAR(255) NOT NULL,
-    customer_id VARCHAR(255) NOT NULL,
+    customer_id VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS user_payment_cards (
@@ -50,15 +69,17 @@ CREATE TABLE IF NOT EXISTS user_payment_cards (
     issuer_name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS spots (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     landlord_user_id VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL,
-    location POINT DEFAULT point(0, 0) NOT NULL,
+    location POINT DEFAULT point(0, 0),
     address JSONB DEFAULT '{}'::JSONB,
+    zone VARCHAR(255),
     capacity INT NOT NULL,
     price_per_minute DOUBLE PRECISION DEFAULT 15.0,
     description TEXT NOT NULL,
@@ -66,7 +87,8 @@ CREATE TABLE IF NOT EXISTS spots (
     photos TEXT[],
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS bookings (
@@ -75,15 +97,17 @@ CREATE TABLE IF NOT EXISTS bookings (
     spot_owner_id VARCHAR(255) NOT NULL,
     spot_id VARCHAR(255) NOT NULL,
     payment_id VARCHAR(255),
-    start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    start_time VARCHAR DEFAULT TO_CHAR(CURRENT_TIMESTAMP, 'HH24:MI:SS'),
+    vehicle_id VARCHAR(255),
+    start_date TIMESTAMP,
+    start_time VARCHAR(50),
     end_date TIMESTAMP,
     end_time VARCHAR(50),
     total_minutes INTEGER DEFAULT 0,
     state VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS payments (
@@ -100,7 +124,8 @@ CREATE TABLE IF NOT EXISTS payments (
     transaction_details JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS user_balances (
@@ -111,7 +136,8 @@ CREATE TABLE IF NOT EXISTS user_balances (
     amount_available_to_withdraw DOUBLE PRECISION NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 0
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
 );
 
 -- Initial Data --
@@ -121,23 +147,35 @@ VALUES ('user@example.com', '$2a$10$w1tANE5zOBNJ8m5HxeaGBe5v22flIBkPPn.CcYuVEyOB
 INSERT INTO users(email, password, state, roles)
 VALUES ('user2@example.com', '$2a$10$kMQldozY8aK6iSodD0Tl1uQDoExQJjjd9NXc260oXGkxzs.2FAIkG', 'ACTIVE', ARRAY['ROLE_USER']);
 
+INSERT INTO users(email, password, state, roles)
+VALUES ('user3@example.com', '$2a$10$kMQldozY8aK6iSodD0Tl1uQDoExQJjjd9NXc260oXGkxzs.2FAIkG', 'ACTIVE', ARRAY['ROLE_USER']);
+
+INSERT INTO user_vehicles (user_id, brand, model, patent, year, type, size)
+VALUES ((SELECT id FROM users WHERE email = 'user2@example.com'), 'Ford', 'KA', 'LGL308', '2012', 'CAR', 'SMALL');
+
 INSERT INTO user_profiles (user_id, name, surname, dni, gender, birth_date, nationality)
 VALUES ((SELECT id FROM users WHERE email = 'user@example.com'),'Juan', 'Pérez', '12345678', 'MALE', '15/10/1996', 'ARGENTINEAN');
 
 INSERT INTO user_profiles (user_id ,name, surname, dni, gender, birth_date, nationality)
 VALUES ((SELECT id FROM users WHERE email = 'user2@example.com'),'Camila', 'Boniato', '12345679', 'FEMALE', '15/10/1996', 'ARGENTINEAN');
 
+INSERT INTO user_profiles (user_id ,name, surname, dni, gender, birth_date, nationality)
+VALUES ((SELECT id FROM users WHERE email = 'user3@example.com'),'Roberto', 'Galatti', '12345680', 'MALE', '15/10/1996', 'ARGENTINEAN');
+
+INSERT INTO user_payment_profiles (user_id, customer_id)
+VALUES ((SELECT id FROM users WHERE email = 'user@example.com'), '2044842671-qk2aKNIOhhyMEx');
+
 INSERT INTO user_payment_profiles (user_id, customer_id)
 VALUES ((SELECT id FROM users WHERE email = 'user2@example.com'), '2045962604-jef6hMCbCinmle');
 
 INSERT INTO user_payment_profiles (user_id, customer_id)
-VALUES ((SELECT id FROM users WHERE email = 'user@example.com'), '2044842671-qk2aKNIOhhyMEx');
+VALUES ((SELECT id FROM users WHERE email = 'user3@example.com'), '2045962604-jef6hMCbCinml4');
 
 INSERT INTO spots(landlord_user_id, type, location, address, capacity, price_per_minute, description, state)
 VALUES (
     (SELECT id FROM users WHERE email = 'user@example.com'),
     'GARAGE',
-    point(-64.09208977582006, -31.464993937374985),
+    point(-64.18385103510106, -31.449264740397403),
     '{
             "houseNumber": "6924",
             "displayName": "Caprichos, 6924, Avenida Vucetich, Ituzaingó, Córdoba, Municipio de Córdoba, Pedanía Capital, Departamento Capital, Córdoba, X5020, Argentina",
@@ -152,9 +190,42 @@ VALUES (
             "country": "Argentina",
             "license": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright"
     }'::JSONB,
-    5,
+    1,
     15.0,
     'Beautiful spot',
+    'AVAILABLE');
+
+INSERT INTO spots(landlord_user_id, type, location, address, capacity, price_per_minute, description, state)
+VALUES (
+    (SELECT id FROM users WHERE email = 'user3@example.com'),
+    'GARAGE',
+    point(-64.17849201497079, -31.449021907575975),
+    '{}'::JSONB,
+    2,
+    15.0,
+    'Espacio amplio con capacidad para dos autos y almacenamiento adicional. Ubicado cerca del centro de la ciudad.',
+    'AVAILABLE');
+
+INSERT INTO spots(landlord_user_id, type, location, address, capacity, price_per_minute, description, state)
+VALUES (
+    (SELECT id FROM users WHERE email = 'user3@example.com'),
+    'GARAGE',
+    point(-64.1736110459356, -31.451168601331055),
+    '{}'::JSONB,
+    1,
+    15.0,
+    'Cochera privada con acceso seguro, ideal para un vehículo y herramientas. Entrada con puerta automática.',
+    'AVAILABLE');
+
+INSERT INTO spots(landlord_user_id, type, location, address, capacity, price_per_minute, description, state)
+VALUES (
+    (SELECT id FROM users WHERE email = 'user3@example.com'),
+    'GARAGE',
+    point(-64.18689330976461, -31.42640087268061),
+    '{}'::JSONB,
+    1,
+    15.0,
+    'Garage cubierto con espacio para un auto, con buena ventilación y fácil acceso desde la calle principal.',
     'AVAILABLE');
 
 INSERT INTO payments(method, transaction_details)
@@ -167,13 +238,14 @@ VALUES ('CREDIT_CARD',
                 )
         ));
 
-INSERT INTO bookings(client_user_id, spot_owner_id, spot_id, payment_id, state)
+INSERT INTO bookings(client_user_id, spot_owner_id, spot_id, payment_id, vehicle_id, state)
 VALUES (
     (SELECT id FROM users WHERE email = 'user2@example.com'),
     (SELECT id FROM users WHERE email = 'user@example.com'),
     (SELECT id FROM spots LIMIT 1),
     (SELECT id FROM payments LIMIT 1),
-    'IN_PROGRESS');
+    (SELECT id FROM user_vehicles LIMIT 1),
+    'PENDING');
 
 INSERT INTO user_balances(user_id, total_amount, amount_pending_to_withdraw, amount_available_to_withdraw)
 VALUES ((SELECT id FROM users WHERE email = 'user@example.com'), 500.0, 100.0, 400.0);
@@ -189,6 +261,7 @@ CREATE UNIQUE INDEX idx_spot_id ON spots(id);
 CREATE UNIQUE INDEX idx_booking_id ON bookings(id);
 CREATE UNIQUE INDEX idx_payment_id ON payments(id);
 CREATE UNIQUE INDEX idx_user_balance_id ON user_balances(id);
+CREATE UNIQUE INDEX idx_user_vehicle_id ON user_vehicles(id);
 
 
 -- Foreign Keys --
@@ -234,6 +307,11 @@ ON DELETE NO ACTION;
 
 ALTER TABLE user_balances
 ADD CONSTRAINT fk_user_balance
+FOREIGN KEY (user_id) REFERENCES users(id)
+ON DELETE NO ACTION;
+
+ALTER TABLE user_vehicles
+ADD CONSTRAINT fk_user_vehicle
 FOREIGN KEY (user_id) REFERENCES users(id)
 ON DELETE NO ACTION;
 

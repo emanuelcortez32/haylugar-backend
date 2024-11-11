@@ -22,6 +22,7 @@ public class SpotDto extends EntityDto {
     private SpotType type;
     private Point location;
     private Address address;
+    private String zone;
     private int capacity;
     private double pricePerMinute;
     private String description;
@@ -29,12 +30,13 @@ public class SpotDto extends EntityDto {
     private String[] photos;
 
     @Builder
-    public SpotDto(String id, LocalDateTime createdAt, Long version, UserDto landLord, SpotType type, Point location, Address address, int capacity, double pricePerMinute, String description, SpotState state, String[] photos) {
+    public SpotDto(String id, LocalDateTime createdAt, Long version, UserDto landLord, SpotType type, Point location, Address address, String zone, int capacity, double pricePerMinute, String description, SpotState state, String[] photos) {
         super(id, createdAt, version);
         this.landLord = landLord;
         this.type = type;
         this.location = location;
         this.address = address;
+        this.zone = zone;
         this.capacity = capacity;
         this.pricePerMinute = pricePerMinute;
         this.description = description;
@@ -52,6 +54,7 @@ public class SpotDto extends EntityDto {
                 .capacity(entity.getCapacity())
                 .location(entity.getLocation())
                 .address(entity.getAddress())
+                .zone(entity.getZone())
                 .pricePerMinute(entity.getPricePerMinute())
                 .description(entity.getDescription())
                 .createdAt(entity.getCreatedAt())
@@ -66,6 +69,7 @@ public class SpotDto extends EntityDto {
                 .capacity(dto.getCapacity())
                 .location(dto.getLocation())
                 .address(dto.getAddress())
+                .zone(dto.getZone())
                 .pricePerMinute(dto.getPricePerMinute())
                 .description(dto.getDescription())
                 .photos(dto.getPhotos())

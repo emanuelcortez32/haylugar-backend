@@ -26,6 +26,7 @@ public class SpotEntity extends GenericEntity {
     private SpotType type;
     private Point location;
     private Address address;
+    private String zone;
     private int capacity;
     @Column("price_per_minute")
     private double pricePerMinute;
@@ -34,12 +35,13 @@ public class SpotEntity extends GenericEntity {
     private String[] photos;
 
     @Builder
-    public SpotEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, String landLordUserId, SpotType type, Point location, Address address, int capacity, double pricePerMinute, String description, SpotState state, String[] photos) {
-        super(id, createdAt, updatedAt, version);
+    public SpotEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String landLordUserId, SpotType type, Point location, Address address, String zone, int capacity, double pricePerMinute, String description, SpotState state, String[] photos) {
+        super(id, createdAt, updatedAt, version, deleted);
         this.landLordUserId = landLordUserId;
         this.type = type;
         this.location = location;
         this.address = address;
+        this.zone = zone;
         this.capacity = capacity;
         this.pricePerMinute = pricePerMinute;
         this.description = description;

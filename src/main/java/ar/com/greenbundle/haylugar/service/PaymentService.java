@@ -51,6 +51,10 @@ public class PaymentService {
                 }));
     }
 
+    public Mono<PaymentDto> getPayment(String paymentId) {
+        return paymentDao.getPayment(paymentId);
+    }
+
     public Mono<String> savePayment(PaymentDto paymentDto) {
         return paymentDao.savePayment(paymentDto)
                 .map(EntityDto::getId);

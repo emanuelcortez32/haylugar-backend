@@ -6,26 +6,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 
 @Slf4j
-@Component
 public class OpenStreetMapClient {
-    @Autowired
-    private ObjectMapper objectMapper;
-
+    private final ObjectMapper objectMapper;
     private final WebClient webClient;
 
-    public OpenStreetMapClient() {
+    public OpenStreetMapClient(ObjectMapper objectMapper) {
+
+        this.objectMapper = objectMapper;
+
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
                 .wiretap("reactor.netty.http.client.HttpClient", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL);
@@ -69,7 +67,7 @@ public class OpenStreetMapClient {
                     return clientResponse.bodyToMono(String.class);
                 })
                 .map(rawResponse -> {
-                    log.info("m=exchange : Raw response [{}]", rawResponse);
+                    log.debug("m=exchange : Raw response [{}]", rawResponse);
                     if (thirdPartyClientResponse.isSuccess()) {
                         try {
                             thirdPartyClientResponse.setData(objectMapper.readValue(rawResponse, AddressData.class));

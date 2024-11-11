@@ -25,6 +25,7 @@ public abstract class GenericEntity {
     private LocalDateTime updatedAt;
     @Version
     private Long version;
+    private boolean deleted;
 
     public GenericEntity(String id, Long version) {
         this.id = id;

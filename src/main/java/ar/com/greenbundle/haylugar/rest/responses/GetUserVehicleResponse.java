@@ -10,12 +10,12 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class StartBookingResponse extends BookingActionResponse {
+public class GetUserVehicleResponse extends ApiResponse {
     @Builder
-    public StartBookingResponse(boolean success,
-                                String message,
-                                String startTime) {
+    public GetUserVehicleResponse(boolean success,
+                                  String message,
+                                  VehicleResponse vehicleResponse) {
         super(success, message);
-        this.data = Map.of("startTime", startTime);
+        this.data = Map.of("vehicle", vehicleResponse);
     }
 }

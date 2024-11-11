@@ -1,5 +1,6 @@
 package ar.com.greenbundle.haylugar.rest.controllers;
 
+import ar.com.greenbundle.haylugar.rest.responses.ApiResponse;
 import ar.com.greenbundle.haylugar.rest.responses.GetUserResponse;
 import ar.com.greenbundle.haylugar.rest.responses.UserProfileResponse;
 import ar.com.greenbundle.haylugar.service.UserService;
@@ -23,7 +24,7 @@ public class UserController {
     @Autowired
     private UserService userService;
     @GetMapping(value = GET_USER, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<GetUserResponse>> getUser(@AuthenticationPrincipal UserDetails principal) {
+    public Mono<ResponseEntity<ApiResponse>> getUser(@AuthenticationPrincipal UserDetails principal) {
         return userService.findUser(principal.getUsername())
                 .map(user -> ResponseEntity.ok(GetUserResponse.builder()
                         .enabled(user.getState().enabled)

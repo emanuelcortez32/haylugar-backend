@@ -10,8 +10,18 @@ public final class ControllerEndpoints {
 
     private static final class SpotEndpoints {
         private static final String BASE = "/spots";
-        public static final String CREATE_SPOT = BASE;
+        public static final String CREATE_SPOT = "/spot";
         public static final String GET_SPOTS = BASE;
+        public static final String UPDATE_SPOT = "/spot";
+        public static final String DELETE_SPOT = "/spot";
+    }
+
+    private static final class VehicleEndpoints {
+        private static final String BASE = "/vehicles";
+        public static final String GET_VEHICLES = BASE;
+        public static final String CREATE_VEHICLE = "/vehicle";
+        public static final String UPDATE_VEHICLE = "/vehicle";
+        public static final String DELETE_VEHICLE = "/vehicle";
     }
 
     private static final class UserEndpoints {
@@ -38,13 +48,22 @@ public final class ControllerEndpoints {
         }
 
         public static final class BookingEndpoints {
-            public static final String GET_BOOKINGS = ControllerEndpoints.BookingEndpoints.GET_BOOKINGS + ME;
-            public static final String POST_BOOKING = ControllerEndpoints.BookingEndpoints.CREATE_BOOKING + ME;
+            public static final String GET_USER_BOOKINGS = ControllerEndpoints.BookingEndpoints.GET_BOOKINGS + ME;
+            public static final String POST_USER_BOOKING = ControllerEndpoints.BookingEndpoints.CREATE_BOOKING + ME;
         }
 
         public static final class SpotEndpoints {
-            public static final String GET_SPOTS = ControllerEndpoints.SpotEndpoints.GET_SPOTS + ME;
-            public static final String POST_SPOT = ControllerEndpoints.SpotEndpoints.CREATE_SPOT + ME;
+            public static final String DELETE_USER_SPOT = ControllerEndpoints.SpotEndpoints.DELETE_SPOT + ME;
+            public static final String PUT_USER_SPOT = ControllerEndpoints.SpotEndpoints.UPDATE_SPOT + ME;
+            public static final String GET_USER_SPOTS = ControllerEndpoints.SpotEndpoints.GET_SPOTS + ME;
+            public static final String POST_USER_SPOT = ControllerEndpoints.SpotEndpoints.CREATE_SPOT + ME;
+        }
+
+        public static final class VehicleEndpoints {
+            public static final String GET_USER_VEHICLES = ControllerEndpoints.VehicleEndpoints.GET_VEHICLES + ME;
+            public static final String POST_USER_VEHICLE = ControllerEndpoints.VehicleEndpoints.CREATE_VEHICLE + ME;
+            public static final String PUT_USER_VEHICLE = ControllerEndpoints.VehicleEndpoints.UPDATE_VEHICLE + ME;
+            public static final String DELETE_USER_VEHICLE = ControllerEndpoints.VehicleEndpoints.DELETE_VEHICLE + ME;
         }
     }
 
@@ -59,6 +78,10 @@ public final class ControllerEndpoints {
 
         public static final class LocationEndpoints {
             public static final String GET_LOCATION = ControllerEndpoints.LocationEndpoints.GET_LOCATION;
+        }
+
+        public static final class SpotEndpoints {
+            public static final String GET_SPOTS = ControllerEndpoints.SpotEndpoints.GET_SPOTS;
         }
     }
 }

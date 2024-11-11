@@ -3,9 +3,9 @@ package ar.com.greenbundle.haylugar.rest.controllers;
 import ar.com.greenbundle.haylugar.dto.BookingDto;
 import ar.com.greenbundle.haylugar.dto.PaymentDto;
 import ar.com.greenbundle.haylugar.dto.SpotDto;
+import ar.com.greenbundle.haylugar.pojo.constants.BookingAction;
 import ar.com.greenbundle.haylugar.rest.requests.CreateBookingRequest;
 import ar.com.greenbundle.haylugar.rest.responses.ApiResponse;
-import ar.com.greenbundle.haylugar.rest.responses.BookingActionResponse;
 import ar.com.greenbundle.haylugar.rest.responses.BookingResponse;
 import ar.com.greenbundle.haylugar.rest.responses.CancelBookingResponse;
 import ar.com.greenbundle.haylugar.rest.responses.CreateBookingResponse;
@@ -34,8 +34,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.function.Function;
 
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.BookingEndpoints.GET_BOOKINGS;
-import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.BookingEndpoints.POST_BOOKING;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.BookingEndpoints.GET_USER_BOOKINGS;
+import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeEndpoints.BookingEndpoints.POST_USER_BOOKING;
 
 @RestController
 @RequestMapping("/api")
@@ -45,7 +45,7 @@ public class BookingController {
     @Autowired
     private BookingService bookingService;
 
-    @GetMapping(value = GET_BOOKINGS, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = GET_USER_BOOKINGS, produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponseEntity<ApiResponse>> getBookings(@AuthenticationPrincipal UserDetails principal,
                                                          @RequestParam(required = false) String bookingId) {
 
@@ -67,34 +67,34 @@ public class BookingController {
                         .build()));
     }
 
-    @PostMapping(value = POST_BOOKING, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<BookingActionResponse>> performActionOnBooking(@RequestParam String bookingId,
-                                                                              @RequestParam String action) {
+    @PostMapping(value = POST_USER_BOOKING, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<ApiResponse>> performActionOnBooking(@RequestParam String bookingId,
+                                                                    @RequestParam BookingAction action) {
         return bookingService.performActionOnBooking(bookingId, action)
                 .map(booking -> switch (action) {
-                    case "start" -> ResponseEntity.ok(StartBookingResponse.builder()
+                    case START -> ResponseEntity.ok(StartBookingResponse.builder()
                                     .success(true)
                                     .message("OK")
-                                    .startedTime(booking.getStartTime())
+                                    .startTime(booking.getStartTime())
                             .build());
-                    case "finish" -> ResponseEntity.ok(FinishBookingResponse.builder()
+                    case FINISH -> ResponseEntity.ok(FinishBookingResponse.builder()
                                     .success(true)
                                     .message("OK")
                                     .totalMinutes(booking.getTotalMinutes())
                                     .paymentId(booking.getPayment().getId())
+                                    .endTime(booking.getEndTime())
                             .build());
-                    case "cancel" -> ResponseEntity.ok(CancelBookingResponse.builder()
+                    case CANCEL -> ResponseEntity.ok(CancelBookingResponse.builder()
                                     .success(true)
                                     .message("OK")
                                     .reason("CANCELED")
                             .build());
-                    default -> ResponseEntity.badRequest().body(new BookingActionResponse(false, "Action invalid"));
                 });
     }
 
-    @PostMapping(value = POST_BOOKING, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<CreateBookingResponse>> createBooking(@AuthenticationPrincipal UserDetails principal,
-                                                                     @RequestBody CreateBookingRequest request) {
+    @PostMapping(value = POST_USER_BOOKING, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<ApiResponse>> createBooking(@AuthenticationPrincipal UserDetails principal,
+                                                           @RequestBody CreateBookingRequest request) {
 
         request.validate();
 
@@ -119,7 +119,8 @@ public class BookingController {
             .state(booking.getState())
             .startDate(TimeZoneUtils.representationDateTimeUTCToZone(booking.getStartDate(),
                     representationTimeZone))
-            .startTime(TimeZoneUtils.representationTimeUTCToZone(LocalTime.parse(booking.getStartTime()),
+            .startTime(TimeZoneUtils.representationTimeUTCToZone(booking.getStartTime() == null ? null :
+                            LocalTime.parse(booking.getStartTime()),
                     representationTimeZone))
             .endDate(TimeZoneUtils.representationDateTimeUTCToZone(booking.getEndDate(),
                     representationTimeZone))

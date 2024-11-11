@@ -23,8 +23,8 @@ public class UserEntity extends GenericEntity {
     private UserState state;
     private List<UserRole> roles;
     @Builder
-    public UserEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, String email, String password, UserState state, List<UserRole> roles) {
-        super(id, createdAt, updatedAt, version);
+    public UserEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String email, String password, UserState state, List<UserRole> roles) {
+        super(id, createdAt, updatedAt, version, deleted);
         this.email = email;
         this.password = password;
         this.state = state;

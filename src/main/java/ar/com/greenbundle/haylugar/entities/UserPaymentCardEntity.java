@@ -41,8 +41,8 @@ public class UserPaymentCardEntity extends GenericEntity {
     private String issuerName;
 
     @Builder
-    public UserPaymentCardEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, String paymentProfileId, String referenceId, String token, Integer expirationMonth, Integer expirationYear, boolean cardDefault, String paymentType, String paymentMethod, Integer securityCodeLength, String securityCodeCardLocation, String issuerId, String issuerName) {
-        super(id, createdAt, updatedAt, version);
+    public UserPaymentCardEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String paymentProfileId, String referenceId, String token, Integer expirationMonth, Integer expirationYear, boolean cardDefault, String paymentType, String paymentMethod, Integer securityCodeLength, String securityCodeCardLocation, String issuerId, String issuerName) {
+        super(id, createdAt, updatedAt, version, deleted);
         this.paymentProfileId = paymentProfileId;
         this.referenceId = referenceId;
         this.token = token;

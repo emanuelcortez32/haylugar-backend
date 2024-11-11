@@ -22,8 +22,8 @@ public class UserPaymentProfileEntity extends GenericEntity {
     private String customerId;
 
     @Builder
-    public UserPaymentProfileEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, String userId, String customerId) {
-        super(id, createdAt, updatedAt, version);
+    public UserPaymentProfileEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String userId, String customerId) {
+        super(id, createdAt, updatedAt, version, deleted);
         this.userId = userId;
         this.customerId = customerId;
     }

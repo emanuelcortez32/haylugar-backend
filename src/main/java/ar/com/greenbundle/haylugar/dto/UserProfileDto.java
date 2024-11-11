@@ -24,6 +24,7 @@ public class UserProfileDto extends EntityDto {
     private String birthDate;
     private Nationality nationality;
     private UserPaymentProfileDto paymentProfile;
+
     @Builder
     public UserProfileDto(String id, LocalDateTime createdAt, Long version, UserDto user, String name, String lastName, String dni, Gender gender, String birthDate, Nationality nationality, UserPaymentProfileDto paymentProfile) {
         super(id, createdAt, version);

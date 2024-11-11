@@ -29,8 +29,8 @@ public class UserProfileEntity extends GenericEntity {
     private Nationality nationality;
 
     @Builder
-    public UserProfileEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, String userId, String name, String surname, String dni, Gender gender, String birthDate, Nationality nationality) {
-        super(id, createdAt, updatedAt, version);
+    public UserProfileEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String userId, String name, String surname, String dni, Gender gender, String birthDate, Nationality nationality) {
+        super(id, createdAt, updatedAt, version, deleted);
         this.userId = userId;
         this.name = name;
         this.surname = surname;

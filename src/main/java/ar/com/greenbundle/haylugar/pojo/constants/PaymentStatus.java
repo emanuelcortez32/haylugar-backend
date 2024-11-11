@@ -7,7 +7,7 @@ public enum PaymentStatus {
     IN_PROCESS("PAY-003", "The payment is under review"),
     IN_MEDIATION("PAY-004", "The user has started a dispute"),
     REJECTED("PAY-005", "Payment was declined (user can try to pay again)"),
-    CANCELLED("PAY-006", "The payment was canceled by either party or expired."),
+    CANCELED("PAY-006", "The payment was canceled by either party or expired."),
     REFUNDED("PAY-007", "The payment was refunded to the user"),
     CHARGED_BACK("PAY-008", "A chargeback was made to the buyer's credit card");
 
