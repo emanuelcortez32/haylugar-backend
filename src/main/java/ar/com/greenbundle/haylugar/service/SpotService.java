@@ -3,9 +3,9 @@ package ar.com.greenbundle.haylugar.service;
 import ar.com.greenbundle.haylugar.dao.SpotDao;
 import ar.com.greenbundle.haylugar.dto.SpotDto;
 import ar.com.greenbundle.haylugar.dto.UserDto;
+import ar.com.greenbundle.haylugar.exceptions.CreateBookingException;
 import ar.com.greenbundle.haylugar.exceptions.CreateSpotException;
 import ar.com.greenbundle.haylugar.exceptions.ResourceNotFoundException;
-import ar.com.greenbundle.haylugar.pojo.constants.AllowedZone;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.beanutils.BeanUtilsBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +15,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Optional;
 
 import static ar.com.greenbundle.haylugar.pojo.constants.SpotState.AVAILABLE;
 @Slf4j
@@ -84,27 +83,24 @@ public class SpotService {
         if(spotDto.getPricePerMinute() < MINIMUM_PRICE_PER_MINUTE)
             return Mono.error(new CreateSpotException("Spot price per minute must be equal or greater than minimum price"));
 
-        Optional<AllowedZone> zone = locationService.getAssignedZoneFromCoordinates(spotDto.getLocation().getX(),
-                spotDto.getLocation().getY());
-
-        if(zone.isEmpty()) {
-            return Mono.error(new CreateSpotException("Spot is not in allowed zone"));
-        } else {
-            spotDto.setZone(zone.get().desc);
-        }
-
-        return spotDao.saveSpot(spotDto)
-                .doOnNext(savedSpot -> locationService.getAddressFromCoordinate(savedSpot.getLocation().getX(), savedSpot.getLocation().getY())
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .doOnError(throwable -> log.warn("The address for the spot[{}] could not be determined : [{}]",
-                                savedSpot.getId(), throwable.getMessage()))
-                        .subscribe(address -> {
-                            savedSpot.setAddress(address);
-                            spotDao.saveSpot(savedSpot)
+        return locationService.getAssignedZoneFromCoordinates(spotDto.getLocation().getX(), spotDto.getLocation().getY())
+                .switchIfEmpty(Mono.error(new CreateBookingException("Spot is not in allowed zone")))
+                .flatMap(zone -> {
+                    spotDto.setZone(zone.getDescription());
+                    return spotDao.saveSpot(spotDto)
+                            .doOnNext(savedSpot -> locationService.getAddressFromCoordinate(savedSpot.getLocation().getX(), savedSpot.getLocation().getY())
                                     .subscribeOn(Schedulers.boundedElastic())
-                                    .subscribe();
-                        }, throwable -> {}))
-                .map(SpotDto::getId);
+                                    .doOnError(throwable -> log.warn("The address for the spot[{}] could not be determined : [{}]",
+                                            savedSpot.getId(), throwable.getMessage()))
+                                    .subscribe(address -> {
+                                        savedSpot.setAddress(address);
+                                        spotDao.saveSpot(savedSpot)
+                                                .subscribeOn(Schedulers.boundedElastic())
+                                                .subscribe();
+                                    }, throwable -> {}))
+                            .map(SpotDto::getId);
+                });
+
     }
 
     public Mono<Void> deleteSpot(SpotDto spotDto) {

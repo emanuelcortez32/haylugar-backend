@@ -1,10 +1,10 @@
 package ar.com.greenbundle.haylugar.service;
 
-import ar.com.greenbundle.haylugar.dao.SpotDao;
+import ar.com.greenbundle.haylugar.entities.app.ZoneEntity;
 import ar.com.greenbundle.haylugar.exceptions.FeatureException;
 import ar.com.greenbundle.haylugar.pojo.Address;
-import ar.com.greenbundle.haylugar.pojo.constants.AllowedZone;
 import ar.com.greenbundle.haylugar.providers.location.LocationProvider;
+import ar.com.greenbundle.haylugar.service.app.ZoneService;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LinearRing;
@@ -16,9 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class LocationService {
@@ -27,26 +25,31 @@ public class LocationService {
     @Autowired
     private LocationProvider locationProvider;
     @Autowired
-    private SpotDao spotDao;
+    private ZoneService zoneService;
 
-    public Optional<AllowedZone> getAssignedZoneFromCoordinates(double longitude, double latitude) {
+    public Mono<ZoneEntity> getAssignedZoneFromCoordinates(double longitude, double latitude) {
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel());
 
         Point point = geometryFactory.createPoint(new Coordinate(longitude, latitude));
 
-        for (AllowedZone zone : AllowedZone.values()) {
-            List<Coordinate> coordinates = Arrays.stream(zone.coordinates)
-                    .map(coordinate -> new Coordinate(coordinate[0], coordinate[1]))
-                    .toList();
+        return zoneService.getAllZones()
+                .collectList()
+                .flatMap(zones -> {
 
-            LinearRing linearRing = geometryFactory.createLinearRing(coordinates.toArray(new Coordinate[0]));
-            Polygon polygon = new Polygon(linearRing, null, geometryFactory);
+                    for (ZoneEntity zone : zones) {
+                        List<Coordinate> coordinates = zone.getCoordinates().stream()
+                                .map(coordinate -> new Coordinate(coordinate.getX(), coordinate.getY()))
+                                .toList();
 
-            if(polygon.contains(point))
-                return Optional.of(zone);
-        }
+                        LinearRing linearRing = geometryFactory.createLinearRing(coordinates.toArray(new Coordinate[0]));
+                        Polygon polygon = new Polygon(linearRing, null, geometryFactory);
 
-        return Optional.empty();
+                        if(polygon.contains(point))
+                            return Mono.just(zone);
+                    }
+
+                    return Mono.empty();
+                });
     }
 
     public Mono<Address> getAddressFromCoordinate(double longitude, double latitude) {

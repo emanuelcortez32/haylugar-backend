@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-import java.util.Map;
 import java.util.function.Function;
 
 import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.GlobalEndpoints.SpotEndpoints.GET_SPOTS;
