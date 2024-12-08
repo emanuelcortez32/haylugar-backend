@@ -6,7 +6,6 @@ import ar.com.greenbundle.haylugar.dto.UserPaymentProfileDto;
 import ar.com.greenbundle.haylugar.repositories.PaymentRepository;
 import ar.com.greenbundle.haylugar.repositories.UserPaymentCardRepository;
 import ar.com.greenbundle.haylugar.repositories.UserPaymentProfileRepository;
-import ar.com.greenbundle.haylugar.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -16,7 +15,7 @@ import java.util.List;
 @Component
 public class PaymentDao {
     @Autowired
-    private UserRepository userRepository;
+    private UserDao userDao;
     @Autowired
     private PaymentRepository paymentRepository;
     @Autowired
@@ -24,19 +23,20 @@ public class PaymentDao {
     @Autowired
     private UserPaymentCardRepository userPaymentCardRepository;
 
-    public Mono<UserPaymentProfileDto> savePaymentProfile(UserPaymentProfileDto userPaymentProfileDto) {
-        return userPaymentProfileRepository.save(UserPaymentProfileDto.mapToEntity(userPaymentProfileDto))
-                .map(paymentProfile -> UserPaymentProfileDto.builderFromEntity(paymentProfile).build());
-
-    }
-
     public Mono<UserPaymentProfileDto> getPaymentProfileByUser(String userId) {
         return userPaymentProfileRepository.findByUserId(userId)
-                .map(paymentProfile -> UserPaymentProfileDto.builderFromEntity(paymentProfile).build())
-                .flatMap(paymentProfile -> userPaymentCardRepository.findPaymentCardsByPaymentProfile(paymentProfile.getId()).collectList()
+                .map(paymentProfile -> new UserPaymentProfileDto().dtoFromEntity(paymentProfile))
+                .flatMap(paymentProfile -> userDao.getUser(paymentProfile.getUser().getId())
+                        .map(user -> {
+                            paymentProfile.setUser(user);
+                            return paymentProfile;
+                        }))
+                .flatMap(paymentProfile -> userPaymentCardRepository.findPaymentCardsByPaymentProfile(paymentProfile.getId())
+                        .collectList()
                         .map(paymentCards -> {
-                            List<UserPaymentCardDto> cards = paymentCards.stream().map(card -> UserPaymentCardDto.builderFromEntity(card)
-                                    .build()).toList();
+                            List<UserPaymentCardDto> cards = paymentCards.stream()
+                                    .map(card -> new UserPaymentCardDto().dtoFromEntity(card))
+                                    .toList();
 
                             paymentProfile.setCards(cards);
 
@@ -46,11 +46,27 @@ public class PaymentDao {
 
     public Mono<PaymentDto> getPayment(String paymentId) {
         return paymentRepository.findById(paymentId)
-                .map(payment -> PaymentDto.builderFromEntity(payment).build());
+                .map(payment -> new PaymentDto().dtoFromEntity(payment));
+    }
+
+    public Mono<PaymentDto> getPaymentByExternalReference(String externalReferenceId) {
+        return paymentRepository.findByExternalReferenceId(externalReferenceId)
+                .map(payment -> new PaymentDto().dtoFromEntity(payment));
+    }
+
+    public Mono<UserPaymentProfileDto> savePaymentProfile(UserPaymentProfileDto userPaymentProfileDto) {
+        return userPaymentProfileRepository.save(new UserPaymentProfileDto().dtoToEntity(userPaymentProfileDto))
+                .map(paymentProfile -> new UserPaymentProfileDto().dtoFromEntity(paymentProfile))
+                .flatMap(paymentProfile -> userDao.getUser(paymentProfile.getUser().getId())
+                        .map(user -> {
+                            paymentProfile.setUser(user);
+                            return paymentProfile;
+                        }));
+
     }
 
     public Mono<PaymentDto> savePayment(PaymentDto paymentDto) {
-        return paymentRepository.save(PaymentDto.mapToEntity(paymentDto))
-                .map(payment -> PaymentDto.builderFromEntity(payment).build());
+        return paymentRepository.save(new PaymentDto().dtoToEntity(paymentDto))
+                .map(payment ->new PaymentDto().dtoFromEntity(payment));
     }
 }

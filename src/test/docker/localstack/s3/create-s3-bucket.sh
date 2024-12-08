@@ -1,7 +1,5 @@
 #!/bin/bash
 
-sleep 5
-
 BUCKET_NAME="local-hay-lugar-images"
 ENDPOINT_URL="http://localhost:4566"
 

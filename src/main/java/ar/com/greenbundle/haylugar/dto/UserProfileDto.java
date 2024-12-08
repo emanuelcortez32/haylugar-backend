@@ -15,8 +15,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class UserProfileDto extends EntityDto {
-    private UserDto user;
+public class UserProfileDto extends EntityDto<UserProfileEntity, UserProfileDto> {
+    private String userId;
     private String name;
     private String lastName;
     private String dni;
@@ -26,9 +26,9 @@ public class UserProfileDto extends EntityDto {
     private UserPaymentProfileDto paymentProfile;
 
     @Builder
-    public UserProfileDto(String id, LocalDateTime createdAt, Long version, UserDto user, String name, String lastName, String dni, Gender gender, String birthDate, Nationality nationality, UserPaymentProfileDto paymentProfile) {
+    public UserProfileDto(String id, LocalDateTime createdAt, Long version, String userId, String name, String lastName, String dni, Gender gender, String birthDate, Nationality nationality, UserPaymentProfileDto paymentProfile) {
         super(id, createdAt, version);
-        this.user = user;
+        this.userId = userId;
         this.name = name;
         this.lastName = lastName;
         this.dni = dni;
@@ -38,9 +38,11 @@ public class UserProfileDto extends EntityDto {
         this.paymentProfile = paymentProfile;
     }
 
-    public static UserProfileDto.UserProfileDtoBuilder builderFromEntity(UserProfileEntity entity) {
+    @Override
+    public UserProfileDto dtoFromEntity(UserProfileEntity entity) {
         return UserProfileDto.builder()
                 .id(entity.getId())
+                .userId(entity.getUserId())
                 .name(entity.getName())
                 .lastName(entity.getSurname())
                 .dni(entity.getDni())
@@ -48,13 +50,15 @@ public class UserProfileDto extends EntityDto {
                 .gender(entity.getGender())
                 .nationality(entity.getNationality())
                 .createdAt(entity.getCreatedAt())
-                .version(entity.getVersion());
+                .version(entity.getVersion())
+                .build();
     }
 
-    public static UserProfileEntity mapToEntity(UserProfileDto dto) {
+    @Override
+    public UserProfileEntity dtoToEntity(UserProfileDto dto) {
         return UserProfileEntity.builder()
                 .id(dto.getId())
-                .userId(dto.getUser().getId())
+                .userId(dto.getUserId())
                 .name(dto.getName())
                 .surname(dto.getLastName())
                 .nationality(dto.getNationality())

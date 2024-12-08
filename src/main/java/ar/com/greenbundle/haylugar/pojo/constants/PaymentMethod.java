@@ -5,5 +5,6 @@ public enum PaymentMethod {
     CREDIT_CARD,
     TRANSFER,
     CRYPTO,
-    CASH
+    CASH,
+    NOT_DEFINED
 }

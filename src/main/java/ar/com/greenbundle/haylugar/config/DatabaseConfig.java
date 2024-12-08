@@ -27,7 +27,7 @@ import java.util.List;
 @Configuration
 @EnableR2dbcRepositories
 @EnableR2dbcAuditing
-public class ReactivePostgresConfig extends AbstractR2dbcConfiguration {
+public class DatabaseConfig extends AbstractR2dbcConfiguration {
     @Value("${r2dbc.host}")
     private String host;
 

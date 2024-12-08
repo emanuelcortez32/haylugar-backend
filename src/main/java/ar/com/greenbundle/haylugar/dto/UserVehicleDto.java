@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class UserVehicleDto extends EntityDto {
+public class UserVehicleDto extends EntityDto<UserVehicleEntity, UserVehicleDto> {
     private UserDto user;
     private String brand;
     private String model;
@@ -38,7 +38,8 @@ public class UserVehicleDto extends EntityDto {
         this.defaultVehicle = defaultVehicle;
     }
 
-    public static UserVehicleDto.UserVehicleDtoBuilder builderFromEntity(UserVehicleEntity entity) {
+    @Override
+    public UserVehicleDto dtoFromEntity(UserVehicleEntity entity) {
         return UserVehicleDto.builder()
                 .id(entity.getId())
                 .user(UserDto.builder().id(entity.getUserId()).build())
@@ -50,10 +51,12 @@ public class UserVehicleDto extends EntityDto {
                 .size(entity.getSize())
                 .defaultVehicle(entity.isDefaultVehicle())
                 .createdAt(entity.getCreatedAt())
-                .version(entity.getVersion());
+                .version(entity.getVersion())
+                .build();
     }
 
-    public static UserVehicleEntity mapToEntity(UserVehicleDto dto) {
+    @Override
+    public UserVehicleEntity dtoToEntity(UserVehicleDto dto) {
         return UserVehicleEntity.builder()
                 .id(dto.getId())
                 .userId(dto.getUser().getId())

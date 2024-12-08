@@ -3,10 +3,10 @@ package ar.com.greenbundle.haylugar.providers.location;
 import ar.com.greenbundle.haylugar.pojo.Address;
 import ar.com.greenbundle.haylugar.rest.clients.openstreetmaps.AddressData;
 import ar.com.greenbundle.haylugar.rest.clients.openstreetmaps.OpenStreetMapClient;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class OpenStreetMapProvider implements LocationProvider {
     private final OpenStreetMapClient openStreetMapClient;
 

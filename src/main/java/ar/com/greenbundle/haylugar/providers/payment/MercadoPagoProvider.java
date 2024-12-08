@@ -8,57 +8,37 @@ import ar.com.greenbundle.haylugar.pojo.constants.Currency;
 import ar.com.greenbundle.haylugar.pojo.constants.PaymentStatus;
 import ar.com.greenbundle.haylugar.rest.clients.ThirdPartyClientResponse;
 import ar.com.greenbundle.haylugar.rest.clients.mercadopago.MercadoPagoClient;
+import com.mercadopago.resources.merchantorder.MerchantOrder;
+import com.mercadopago.resources.preference.Preference;
 import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
-import static ar.com.greenbundle.haylugar.pojo.constants.PaymentMethod.CREDIT_CARD;
-import static ar.com.greenbundle.haylugar.pojo.constants.PaymentProvider.MERCADO_PAGO;
-
 @AllArgsConstructor
 public class MercadoPagoProvider implements PaymentProvider {
     private final MercadoPagoClient mercadoPagoClient;
 
     @Override
-    public Payment createPayment(String customerId, String customerEmail, String cardToken, double amount) {
-        ThirdPartyClientResponse<com.mercadopago.resources.payment.Payment> createPayment = mercadoPagoClient
-                .createPayment(customerId, customerEmail, cardToken, amount);
+    public Payment createPayment(String customerId, String customerEmail, double amount) {
+        ThirdPartyClientResponse<Preference> createPreference = mercadoPagoClient
+                .createPreference(customerEmail, amount);
 
-        if(!createPayment.isSuccess())
+        if(!createPreference.isSuccess())
             throw new PaymentProcessException("Payment could not be created");
 
-        com.mercadopago.resources.payment.Payment payment = createPayment.getData();
+        Preference preference = createPreference.getData();
 
-        BigDecimal totalPaidAmount = payment.getTransactionDetails().getTotalPaidAmount();
-        BigDecimal netReceivedAmount = payment.getTransactionDetails().getNetReceivedAmount();
-
-        BigDecimal netAmountUser = calculateCommissionPercentage(totalPaidAmount, new BigDecimal("85"));
-        BigDecimal amountProvider = totalPaidAmount.subtract(netReceivedAmount);
-        BigDecimal amountPlatform = netReceivedAmount.subtract(netAmountUser);
-
-        return Payment.builder()
-                .id(payment.getId().toString())
-                .provider(MERCADO_PAGO)
-                .method(CREDIT_CARD)
-                .paymentTypeId(payment.getPaymentTypeId())
-                .paymentMethodId(payment.getPaymentMethodId())
-                .currency(Currency.valueOf(payment.getCurrencyId()))
-                .totalPrice(totalPaidAmount.doubleValue())
-                .providerAmount(amountProvider.doubleValue())
-                .platformAmount(amountPlatform.doubleValue())
-                .userNetAmount(netReceivedAmount.doubleValue())
-                .transactionAmountRefunded(payment.getTransactionAmountRefunded().doubleValue())
-                .issuerId(payment.getIssuerId())
-                .dateCreated(payment.getDateCreated())
-                .dateApproved(payment.getDateApproved())
-                .dateLastUpdated(payment.getDateLastUpdated())
-                .dateOfExpiration(payment.getDateOfExpiration())
-                .moneyReleaseDate(payment.getMoneyReleaseDate())
-                .metadata(payment.getMetadata())
-                .status(PaymentStatus.valueOf(payment.getStatus().toUpperCase()))
-                .statusDetail(payment.getStatusDetail())
+        return Payment.builder().id(preference.getId())
+                .provider(ar.com.greenbundle.haylugar.pojo.constants.PaymentProvider.MERCADO_PAGO)
+                .currency(Currency.ARS)
+                .status(PaymentStatus.PENDING)
+                .statusDetail("PAYMENT_CRATED")
+                .dateCreated(preference.getDateCreated())
+                .dateOfExpiration(preference.getDateOfExpiration())
+                .metadata(preference.getMetadata())
+                .initUrl(preference.getSandboxInitPoint())
                 .build();
     }
 
@@ -77,7 +57,7 @@ public class MercadoPagoProvider implements PaymentProvider {
 
         List<UserPaymentCardDto> cards = customer.getCards().stream()
                 .map(card -> UserPaymentCardDto.builder()
-                        .referenceId(card.getId())
+                        .externalReferenceId(card.getId())
                         .paymentMethod(card.getPaymentMethod().getName())
                         .paymentType(card.getPaymentMethod().getPaymentTypeId())
                         .issuerName(card.getIssuer().getName())
@@ -119,6 +99,65 @@ public class MercadoPagoProvider implements PaymentProvider {
                 .identificationType(customer.getIdentification().getType())
                 .identificationNumber(customer.getIdentification().getNumber())
                 .build();
+    }
+
+    @Override
+    public Payment updatePayment(Payment payment) {
+        return null;
+    }
+
+    @Override
+    public Payment getPayment(String paymentId) {
+        /*
+        BigDecimal totalPaidAmount = payment.getTransactionDetails().getTotalPaidAmount();
+        BigDecimal netReceivedAmount = payment.getTransactionDetails().getNetReceivedAmount();
+
+        BigDecimal netAmountUser = calculateCommissionPercentage(totalPaidAmount, new BigDecimal("85"));
+        BigDecimal amountProvider = totalPaidAmount.subtract(netReceivedAmount);
+        BigDecimal amountPlatform = netReceivedAmount.subtract(netAmountUser);
+
+        return Payment.builder()
+                .id(payment.getId().toString())
+                .provider(MERCADO_PAGO)
+                .method(CREDIT_CARD)
+                .paymentTypeId(payment.getPaymentTypeId())
+                .paymentMethodId(payment.getPaymentMethodId())
+                .currency(Currency.valueOf(payment.getCurrencyId()))
+                .totalPrice(totalPaidAmount.doubleValue())
+                .providerAmount(amountProvider.doubleValue())
+                .platformAmount(amountPlatform.doubleValue())
+                .userNetAmount(netReceivedAmount.doubleValue())
+                .transactionAmountRefunded(payment.getTransactionAmountRefunded().doubleValue())
+                .issuerId(payment.getIssuerId())
+                .dateCreated(payment.getDateCreated())
+                .dateApproved(payment.getDateApproved())
+                .dateLastUpdated(payment.getDateLastUpdated())
+                .dateOfExpiration(payment.getDateOfExpiration())
+                .moneyReleaseDate(payment.getMoneyReleaseDate())
+                .metadata(payment.getMetadata())
+                .status(PaymentStatus.valueOf(payment.getStatus().toUpperCase()))
+                .statusDetail(payment.getStatusDetail())
+                .build();*/
+        return null;
+    }
+
+    @Override
+    public Payment getPaymentByOrder(Long orderId) {
+        ThirdPartyClientResponse<MerchantOrder> getOrder = mercadoPagoClient
+                .getMerchantOrder(orderId);
+
+        if(!getOrder.isSuccess())
+            throw new PaymentProcessException("Payment order could not be found");
+
+        MerchantOrder order = getOrder.getData();
+        BigDecimal totalPaidAmount = order.getTotalAmount();
+        BigDecimal netReceivedAmount = order.getTotalAmount();
+
+        BigDecimal netAmountUser = calculateCommissionPercentage(totalPaidAmount, new BigDecimal("85"));
+        BigDecimal amountProvider = totalPaidAmount.subtract(netReceivedAmount);
+        BigDecimal amountPlatform = netReceivedAmount.subtract(netAmountUser);
+
+        return null;
     }
 
     private BigDecimal calculateCommissionPercentage(BigDecimal value, BigDecimal percentage) {

@@ -30,7 +30,7 @@ public class JwtUtil {
         if(StringUtils.isNullOrEmpty(secret))
             throw new IllegalStateException("Secret is not defined !!!");
 
-        final long EXPIRATION_TIME = 1000 * 60 * 60; //1 hour
+        final long EXPIRATION_TIME = 5000 * 60 * 60; //5 hours
         final Date issuedTime = new Date(System.currentTimeMillis());
         final Date expirationTime = new Date(System.currentTimeMillis() + EXPIRATION_TIME);
 

@@ -21,7 +21,11 @@ public class WebSecurityConfig {
                                                          ReactiveAuthenticationManager authenticationManager,
                                                          ServerAuthenticationConverter authenticationConverter) {
 
-        final String[] UNSECURED_PATHS = {"/api/auth/**","/healthcheck"};
+        final String[] UNSECURED_PATHS = {
+                "/api/app/config/**",
+                "/api/auth/**",
+                "/api/payment/process/**",
+                "/healthcheck"};
 
         final AuthenticationWebFilter authenticationWebFilter = new AuthenticationWebFilter(authenticationManager);
         authenticationWebFilter.setServerAuthenticationConverter(authenticationConverter);

@@ -18,13 +18,13 @@ import java.time.LocalDateTime;
 public class UserPaymentProfileEntity extends GenericEntity {
     @Column("user_id")
     private String userId;
-    @Column("customer_id")
-    private String customerId;
+    @Column("external_reference_id")
+    private String externalReferenceId;
 
     @Builder
-    public UserPaymentProfileEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String userId, String customerId) {
+    public UserPaymentProfileEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String userId, String externalReferenceId) {
         super(id, createdAt, updatedAt, version, deleted);
         this.userId = userId;
-        this.customerId = customerId;
+        this.externalReferenceId = externalReferenceId;
     }
 }

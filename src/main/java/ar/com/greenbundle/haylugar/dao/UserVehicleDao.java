@@ -16,22 +16,22 @@ public class UserVehicleDao {
     public Mono<UserVehicleDto> getVehicle(String vehicleId) {
         return vehicleRepository.findById(vehicleId)
                 .filter(vehicle -> !vehicle.isDeleted())
-                .map(vehicle -> UserVehicleDto.builderFromEntity(vehicle).build());
+                .map(vehicle -> new UserVehicleDto().dtoFromEntity(vehicle));
     }
 
     public Flux<UserVehicleDto> getVehiclesByUserId(String userId) {
         return vehicleRepository.findVehiclesByUserId(userId)
                 .filter(vehicle -> !vehicle.isDeleted())
-                .map(vehicle -> UserVehicleDto.builderFromEntity(vehicle).build());
+                .map(vehicle -> new UserVehicleDto().dtoFromEntity(vehicle));
     }
 
     public Mono<UserVehicleDto> saveVehicle(UserVehicleDto vehicleDto) {
-        return vehicleRepository.save(UserVehicleDto.mapToEntity(vehicleDto))
-                .map(vehicle -> UserVehicleDto.builderFromEntity(vehicle).build());
+        return vehicleRepository.save(new UserVehicleDto().dtoToEntity(vehicleDto))
+                .map(vehicle -> new UserVehicleDto().dtoFromEntity(vehicle));
     }
 
     public Mono<Void> deleteVehicle(UserVehicleDto vehicleDto) {
-        UserVehicleEntity entity = UserVehicleDto.mapToEntity(vehicleDto);
+        UserVehicleEntity entity = new UserVehicleDto().dtoToEntity(vehicleDto);
         entity.setDeleted(true);
 
         return vehicleRepository.save(entity)

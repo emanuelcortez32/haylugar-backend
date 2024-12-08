@@ -22,8 +22,8 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @Table("payments")
 public class PaymentEntity extends GenericEntity {
-    @Column("reference_id")
-    private String referenceId;
+    @Column("external_reference_id")
+    private String externalReferenceId;
     private PaymentMethod method;
     private PaymentProvider provider;
     @Column("total_price")
@@ -41,9 +41,9 @@ public class PaymentEntity extends GenericEntity {
     private List<PaymentTransactionDetail> transactionDetails;
 
     @Builder
-    public PaymentEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String referenceId, PaymentMethod method, PaymentProvider provider, double totalPrice, double providerAmount, double platformAmount, double userNetAmount, Currency currency, PaymentStatus lastStatus, List<PaymentTransactionDetail> transactionDetails) {
+    public PaymentEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String externalReferenceId, PaymentMethod method, PaymentProvider provider, double totalPrice, double providerAmount, double platformAmount, double userNetAmount, Currency currency, PaymentStatus lastStatus, List<PaymentTransactionDetail> transactionDetails) {
         super(id, createdAt, updatedAt, version, deleted);
-        this.referenceId = referenceId;
+        this.externalReferenceId = externalReferenceId;
         this.method = method;
         this.provider = provider;
         this.totalPrice = totalPrice;

@@ -3,7 +3,7 @@
 set -e
 
 startService() {
-  java -Xms256m -Xmx512m \
+  java -Xms512m -Xmx1536m -XX:MaxMetaspaceSize=256m -XX:MaxGCPauseMillis=200 \
        -jar /vol/greenbundle/component/jar/$APPLICATION.jar \
        --spring.profiles.active="$ENVIRONMENT"
 

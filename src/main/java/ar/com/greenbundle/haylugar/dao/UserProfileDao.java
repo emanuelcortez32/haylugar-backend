@@ -14,15 +14,18 @@ public class UserProfileDao {
     private UserProfileRepository userProfileRepository;
     @Autowired
     private UserPaymentProfileRepository userPaymentProfileRepository;
+
     public Mono<UserProfileDto> getProfileByUser(String userId) {
         return userProfileRepository.findByUserId(userId)
-                .map(profile -> UserProfileDto.builderFromEntity(profile).build())
+                .map(profile -> new UserProfileDto().dtoFromEntity(profile))
                 .flatMap(profile -> userPaymentProfileRepository.findByUserId(userId)
-                        .doOnNext(paymentProfile -> profile.setPaymentProfile(UserPaymentProfileDto.builderFromEntity(paymentProfile).build())).then(Mono.just(profile)));
+                        .doOnNext(paymentProfile ->
+                                profile.setPaymentProfile(new UserPaymentProfileDto().dtoFromEntity(paymentProfile)))
+                        .then(Mono.just(profile)));
     }
 
     public Mono<UserProfileDto> saveProfile(UserProfileDto profileDto) {
-        return userProfileRepository.save(UserProfileDto.mapToEntity(profileDto))
-                .map(profile -> UserProfileDto.builderFromEntity(profile).build());
+        return userProfileRepository.save(new UserProfileDto().dtoToEntity(profileDto))
+                .map(profile -> new UserProfileDto().dtoFromEntity(profile));
     }
 }

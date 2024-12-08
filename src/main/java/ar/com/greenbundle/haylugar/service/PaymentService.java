@@ -2,7 +2,6 @@ package ar.com.greenbundle.haylugar.service;
 
 import ar.com.greenbundle.haylugar.dao.PaymentDao;
 import ar.com.greenbundle.haylugar.dto.BookingDto;
-import ar.com.greenbundle.haylugar.dto.EntityDto;
 import ar.com.greenbundle.haylugar.dto.PaymentDto;
 import ar.com.greenbundle.haylugar.dto.UserDto;
 import ar.com.greenbundle.haylugar.dto.UserPaymentProfileDto;
@@ -11,12 +10,16 @@ import ar.com.greenbundle.haylugar.exceptions.ResourceNotFoundException;
 import ar.com.greenbundle.haylugar.pojo.Customer;
 import ar.com.greenbundle.haylugar.pojo.Payment;
 import ar.com.greenbundle.haylugar.pojo.PaymentTransactionDetail;
+import ar.com.greenbundle.haylugar.pojo.constants.PaymentMethod;
 import ar.com.greenbundle.haylugar.providers.payment.PaymentProvider;
 import ar.com.greenbundle.haylugar.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static ar.com.greenbundle.haylugar.pojo.constants.PaymentStatus.PENDING;
 
@@ -33,7 +36,7 @@ public class PaymentService {
         return paymentDao.getPaymentProfileByUser(userDto.getId())
                 .map(paymentProfile -> {
                     log.info("User already have payment profile");
-                    return paymentProfile.getUserId();
+                    return paymentProfile.getId();
                 })
                 .switchIfEmpty(Mono.defer(() -> createNewPaymentProfile(userDto)));
     }
@@ -42,13 +45,47 @@ public class PaymentService {
         return paymentDao.getPayment(paymentId);
     }
 
-    public Mono<String> savePayment(PaymentDto paymentDto) {
-        return paymentDao.savePayment(paymentDto)
-                .map(EntityDto::getId);
+    public Mono<PaymentDto> savePayment(PaymentDto paymentDto) {
+        return paymentDao.savePayment(paymentDto);
+    }
+
+    public Mono<Payment> createPaymentIntentForUser(UserDto user, double amount) {
+        Payment payment = paymentProvider.createPayment(user.getProfile().getPaymentProfile().getExternalReferenceId(),
+                user.getEmail(), amount);
+
+        PaymentDto basePayment = PaymentDto.builder()
+                .externalReferenceId(payment.getId())
+                .method(PaymentMethod.NOT_DEFINED)
+                .provider(payment.getProvider())
+                .currency(payment.getCurrency())
+                .lastStatus(payment.getStatus())
+                .build();
+
+        if(basePayment.getTransactionDetails() == null) {
+            basePayment.setTransactionDetails(new ArrayList<>());
+        }
+
+        basePayment.getTransactionDetails().add(createTransactionDetail(payment));
+
+        return paymentDao.savePayment(basePayment)
+                .then(Mono.just(payment));
+    }
+
+    public Mono<PaymentDto> processPayment(Long orderId) {
+        Payment payment = paymentProvider.getPaymentByOrder(orderId);
+
+        return Mono.empty();
+    }
+
+    public Mono<PaymentDto> createPaymentSkeleton(UserDto client, PaymentDto basePayment) {
+        Payment payment = paymentProvider.createPayment(client.getProfile().getPaymentProfile().getExternalReferenceId(),
+                client.getEmail(), 1);
+
+        updateBookingPayment(basePayment, payment);
+        return Mono.just(basePayment);
     }
 
     public Mono<PaymentDto> processPaymentForBooking(BookingDto bookingDto, double amount) {
-
         if (isUserPaymentProfileInvalid(bookingDto))
             return Mono.error(new PaymentProcessException("User not have payment profile"));
 
@@ -79,9 +116,9 @@ public class PaymentService {
         }
 
         UserPaymentProfileDto paymentProfileDto = UserPaymentProfileDto.builder()
-                .userId(userDto.getId())
-                .customerId(customer.getId())
-                .cards(customer.getCards())
+                .user(userDto)
+                .externalReferenceId(customer.getId())
+                .cards(List.of())
                 .build();
 
         return paymentDao.savePaymentProfile(paymentProfileDto)
@@ -90,7 +127,7 @@ public class PaymentService {
 
     private boolean isUserPaymentProfileInvalid(BookingDto bookingDto) {
         return bookingDto.getClient().getProfile().getPaymentProfile() == null ||
-                StringUtils.isNullOrEmpty(bookingDto.getClient().getProfile().getPaymentProfile().getCustomerId());
+                StringUtils.isNullOrEmpty(bookingDto.getClient().getProfile().getPaymentProfile().getExternalReferenceId());
     }
 
     private boolean isBookingPaymentInvalid(BookingDto bookingDto) {
@@ -98,17 +135,20 @@ public class PaymentService {
     }
 
     private void updateBookingPayment(PaymentDto bookingPayment, Payment payment) {
-        bookingPayment.setReferenceId(payment.getId());
-        bookingPayment.setMethod(payment.getMethod());
+        bookingPayment.setExternalReferenceId(payment.getId());
         bookingPayment.setProvider(payment.getProvider());
         bookingPayment.setTotalPrice(payment.getTotalPrice());
         bookingPayment.setProviderAmount(payment.getProviderAmount());
         bookingPayment.setPlatformAmount(payment.getPlatformAmount());
         bookingPayment.setUserNetAmount(payment.getUserNetAmount());
         bookingPayment.setLastStatus(payment.getStatus());
+        bookingPayment.setCurrency(payment.getCurrency());
 
-        bookingPayment.getTransactionDetails()
-                .add(createTransactionDetail(payment));
+        if(bookingPayment.getTransactionDetails() == null) {
+            bookingPayment.setTransactionDetails(new ArrayList<>());
+        }
+
+        bookingPayment.getTransactionDetails().add(createTransactionDetail(payment));
     }
 
     private PaymentTransactionDetail createTransactionDetail(Payment payment) {
@@ -120,11 +160,10 @@ public class PaymentService {
     }
 
     private Mono<PaymentDto> processFreshPayment(BookingDto bookingDto, PaymentDto bookingPayment, double amount) {
-        String cardToken = "38db57561beef9ed05fb7b51ba9cd69d";
-        String customerId = bookingDto.getClient().getProfile().getPaymentProfile().getCustomerId();
+        String customerId = bookingDto.getClient().getProfile().getPaymentProfile().getExternalReferenceId();
         String customerEmail = bookingDto.getClient().getEmail();
 
-        Payment payment = paymentProvider.createPayment(customerId, customerEmail, cardToken, amount);
+        Payment payment = paymentProvider.createPayment(customerId, customerEmail, amount);
 
         updateBookingPayment(bookingPayment, payment);
 

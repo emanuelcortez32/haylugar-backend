@@ -24,4 +24,10 @@ public class Queries {
     public static class Vehicles {
         public static final String SELECT_VEHICLES_BY_USER_ID = "SELECT * FROM user_vehicles WHERE user_id = :user_id";
     }
+    public static class UserBalances {
+        public static final String SELECT_USER_BALANCE_BY_USER_ID = "SELECT * FROM user_balances WHERE user_id = :user_id";
+    }
+    public static class Payments {
+        public static final String SELECT_PAYMENT_BY_EXTERNAL_REFERENCE_ID = "SELECT * FROM payments WHERE external_reference_id = :external_reference_id";
+    }
 }

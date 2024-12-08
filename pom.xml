@@ -36,6 +36,7 @@
 		<mercadopago-sdk.version>2.1.29</mercadopago-sdk.version>
 		<jackson-datatype.version>2.17.0</jackson-datatype.version>
 		<amazon-sdk.version>1.12.772</amazon-sdk.version>
+		<amazon-secretsmanager.version>2.29.14</amazon-secretsmanager.version>
 		<caffeine.version>3.1.0</caffeine.version>
 	</properties>
 	<dependencies>
@@ -118,6 +119,11 @@
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-ssm</artifactId>
 			<version>${amazon-sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>secretsmanager</artifactId>
+			<version>${amazon-secretsmanager.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.amazonaws</groupId>

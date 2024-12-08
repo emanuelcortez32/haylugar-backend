@@ -19,8 +19,6 @@ import java.time.LocalDateTime;
 public class BookingEntity extends GenericEntity {
     @Column("client_user_id")
     private String clientUserId;
-    @Column("spot_owner_id")
-    private String spotOwnerId;
     @Column("spot_id")
     private String spotId;
     @Column("payment_id")
@@ -40,10 +38,9 @@ public class BookingEntity extends GenericEntity {
     private BookingState state;
 
     @Builder
-    public BookingEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String clientUserId, String spotOwnerId, String spotId, String paymentId, String vehicleId, LocalDateTime startDate, String startTime, LocalDateTime endDate, String endTime, long totalMinutes, BookingState state) {
+    public BookingEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String clientUserId, String spotId, String paymentId, String vehicleId, LocalDateTime startDate, String startTime, LocalDateTime endDate, String endTime, long totalMinutes, BookingState state) {
         super(id, createdAt, updatedAt, version, deleted);
         this.clientUserId = clientUserId;
-        this.spotOwnerId = spotOwnerId;
         this.spotId = spotId;
         this.paymentId = paymentId;
         this.vehicleId = vehicleId;

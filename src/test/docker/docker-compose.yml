@@ -4,7 +4,7 @@ services:
     image: localstack/localstack
     container_name: aws-local-stack
     environment:
-      - SERVICES=ssm,s3,ecr,ec2,sqs,apigateway,secretsmanager
+      - SERVICES=ssm,s3,secretsmanager
       - DEFAULT_REGION=us-east-1
       - DEBUG=1
       - DOCKER_HOST=unix:///var/run/docker.sock

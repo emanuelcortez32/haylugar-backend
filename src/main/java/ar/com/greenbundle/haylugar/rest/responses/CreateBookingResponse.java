@@ -15,8 +15,8 @@ import java.util.Map;
 public class CreateBookingResponse extends ApiResponse {
     @Builder
     public CreateBookingResponse(boolean success,
-                              String message,
-                              String id) {
+                                 String message,
+                                 String id) {
         super(success, message);
         this.data = Map.of("id", id);
     }

@@ -12,12 +12,15 @@ import ar.com.greenbundle.haylugar.exceptions.ResourceNotFoundException;
 import ar.com.greenbundle.haylugar.pojo.PaymentTransactionDetail;
 import ar.com.greenbundle.haylugar.pojo.constants.BookingAction;
 import ar.com.greenbundle.haylugar.pojo.constants.BookingState;
+import ar.com.greenbundle.haylugar.pojo.constants.Currency;
+import ar.com.greenbundle.haylugar.pojo.constants.PaymentMethod;
 import ar.com.greenbundle.haylugar.pojo.constants.PaymentStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -25,6 +28,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 import static ar.com.greenbundle.haylugar.pojo.constants.BookingState.CANCELED;
@@ -40,15 +44,13 @@ import static ar.com.greenbundle.haylugar.pojo.constants.SpotState.BUSY;
 @Service
 public class BookingService {
     @Autowired
-    private BookingDao bookingDao;
-    @Autowired
-    private SpotService spotService;
-    @Autowired
-    private UserService userService;
-    @Autowired
     private PaymentService paymentService;
     @Autowired
+    private BookingDao bookingDao;
+    @Autowired
     private LocationService locationService;
+    @Autowired
+    private SpotService spotService;
 
     public Flux<BookingDto> findBookingsByUser(String userId) {
         return bookingDao.getBookingsByUser(userId)
@@ -63,16 +65,18 @@ public class BookingService {
     }
 
     @Transactional
-    public Mono<String> createBooking(String clientUserId, BookingDto bookingDto) {
-        Mono<UserDto> userOperation = userService.findUser(clientUserId);
-        Mono<SpotDto> spotOperation = spotService.findSpot(bookingDto.getSpot().getId());
-        PaymentDto initialPayment = createInitialPayment(bookingDto);
+    public Mono<String> createBooking(String userClientId, String spotId, PaymentMethod paymentMethod, Currency paymentCurrency) {
 
-        bookingDto.setState(BookingState.PENDING);
+        BookingDto bookingDto = BookingDto.builder()
+                .client(UserDto.builder().id(userClientId).build())
+                .spot(SpotDto.builder().id(spotId).build())
+                .payment(PaymentDto.builder().method(paymentMethod).currency(paymentCurrency).build())
+                .state(BookingState.PENDING)
+                .build();
 
-        return userOperation
-                .zipWhen(__ -> spotOperation)
-                .flatMap(tuple -> handleBookingCreation(tuple.getT1(), tuple.getT2(), bookingDto, initialPayment));
+        preparePayment(bookingDto);
+
+        return handleBookingCreation(bookingDto);
     }
 
     public Mono<BookingDto> performActionOnBooking(String bookingId, BookingAction action) {
@@ -87,62 +91,71 @@ public class BookingService {
     public Mono<BookingDto> startBooking(String bookingId) {
         return bookingDao.getBooking(bookingId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Booking Not Found")))
-                .flatMap(booking -> spotService.findSpot(booking.getSpot().getId())
-                        .flatMap(spot -> processStartBooking(booking, spot)));
+                .flatMap(this::processStartBooking);
     }
 
     private Mono<BookingDto> finishBooking(String bookingId) {
         return bookingDao.getBooking(bookingId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Booking Not found")))
-                .flatMap(booking -> spotService.findSpot(booking.getSpot().getId())
-                        .switchIfEmpty(Mono.error(new ResourceNotFoundException("Spot not found")))
-                        .flatMap(spot -> processFinishBooking(booking, spot)));
+                .flatMap(this::processFinishBooking);
     }
 
     public Mono<BookingDto> cancelBooking(String bookingId) {
 
         return bookingDao.getBooking(bookingId)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Booking Not Found")))
-                .flatMap(booking -> spotService.findSpot(booking.getSpot().getId())
-                        .flatMap(spot -> processCancelBooking(booking, spot)));
+                .flatMap(this::processCancelBooking);
     }
 
     private Mono<BookingDto> setUserRoleForBooking(String userId, BookingDto booking) {
         if (booking.getClient().getId().equals(userId))
             booking.setBookingUserAs(CLIENT);
-        if (booking.getSpotOwner().getId().equals(userId))
+        if (booking.getSpot().getLandLord().getId().equals(userId))
             booking.setBookingUserAs(HOST);
 
         return Mono.just(booking);
     }
 
     private Mono<BookingDto> validateUserAccessToBooking(String userId, BookingDto booking) {
-        if (!booking.getSpotOwner().getId().equals(userId) && !booking.getClient().getId().equals(userId)) {
+        if (!booking.getSpot().getLandLord().getId().equals(userId) && !booking.getClient().getId().equals(userId)) {
             return Mono.error(new ResourceNotFoundException("Booking not found"));
         }
         return setUserRoleForBooking(userId, booking);
     }
 
-    private PaymentDto createInitialPayment(BookingDto bookingDto) {
+    private void preparePayment(BookingDto bookingDto) {
         PaymentDto initialPayment = bookingDto.getPayment();
-        initialPayment.setLastStatus(PENDING);
-        initialPayment.setProvider(NOT_DEFINED);
-        initialPayment.setTransactionDetails(List.of(PaymentTransactionDetail.builder()
+        List<PaymentTransactionDetail> transactionDetails = new ArrayList<>();
+
+        transactionDetails.add(PaymentTransactionDetail.builder()
                 .date(OffsetDateTime.now())
                 .status(PENDING)
                 .statusDetail("Initial payment creation")
-                .build()));
-        return initialPayment;
+                .build());
+
+        initialPayment.setLastStatus(PENDING);
+        initialPayment.setProvider(NOT_DEFINED);
+        initialPayment.setTransactionDetails(transactionDetails);
+
+        bookingDto.setPayment(initialPayment);
     }
 
-    private Mono<String> handleBookingCreation(UserDto user, SpotDto spot, BookingDto bookingDto, PaymentDto initialPayment) {
-        bookingDto.setSpotOwner(spot.getLandLord());
-        bookingDto.setClient(user);
+    private Mono<String> handleBookingCreation(BookingDto bookingDto) {
 
-        return bookingDao.getBookingsBySpot(spot.getId())
-                .collectList()
-                .map(bookings -> validateSpotAvailability(bookings, spot, bookingDto))
-                .flatMap(__ -> savePaymentAndBooking(initialPayment, bookingDto))
+        return bookingDao.getBookingsBySpot(bookingDto.getSpot().getId()).collectList()
+                .map(bookings -> {
+                    if(bookings.isEmpty()) {
+                        return true;
+                    } else {
+                        return validateSpotAvailability(bookings, bookings.get(0).getSpot(), bookingDto);
+                    }
+                })
+                .flatMap(__ -> spotService.findSpot(bookingDto.getSpot().getId()))
+                .map(spot -> {
+                    bookingDto.setSpot(spot);
+                    return bookingDto;
+                })
+                .flatMap(__ -> savePaymentAndBooking(bookingDto))
                 .map(EntityDto::getId);
     }
 
@@ -162,16 +175,18 @@ public class BookingService {
         return true;
     }
 
-    private Mono<BookingDto> savePaymentAndBooking(PaymentDto initialPayment, BookingDto bookingDto) {
-        return paymentService.savePayment(initialPayment)
-                .doOnNext(paymentId -> {
-                    initialPayment.setId(paymentId);
-                    bookingDto.setPayment(initialPayment);
-                })
-                .then(bookingDao.saveBooking(bookingDto));
+    private Mono<BookingDto> savePaymentAndBooking(BookingDto bookingDto) {
+        return bookingDao.saveBooking(bookingDto)
+                .flatMap(savedBooking -> paymentService.createPaymentSkeleton(savedBooking.getClient(), bookingDto.getPayment())
+                        .flatMap(skeletonPayment -> paymentService.savePayment(skeletonPayment))
+                        .flatMap(savedPayment -> {
+                            savedBooking.setPayment(savedPayment);
+                            return bookingDao.saveBooking(savedBooking);
+                        }));
     }
 
-    private Mono<BookingDto> processStartBooking(BookingDto booking, SpotDto spot) {
+    private Mono<BookingDto> processStartBooking(BookingDto booking) {
+        SpotDto spot = booking.getSpot();
 
         if (!booking.getState().equals(BookingState.PENDING))
             return Mono.error(new BookingFinishedException(String.format("Booking is not in pending, current state [%s]",
@@ -188,24 +203,26 @@ public class BookingService {
                     booking.setState(BookingState.IN_PROGRESS);
 
                     return bookingDao.saveBooking(booking)
-                            .flatMap(savedBooking -> bookingDao.getBookingsBySpot(spot.getId())
-                                    .collectList()
-                                    .flatMap(bookings -> {
+                            .doOnNext(savedBooking -> bookingDao.getBookingsBySpot(savedBooking.getSpot().getId()).collectList()
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .subscribe(bookings -> {
                                         int spotSize = (int) bookings.stream()
                                                 .filter(b -> !b.getState().equals(FINISHED) && !b.getState().equals(CANCELED))
                                                 .count();
 
                                         if (spotSize == spot.getCapacity()) {
                                             spot.setState(BUSY);
-                                            return spotService.updateSpot(spot).then(Mono.just(savedBooking));
+                                            spotService.updateSpot(spot);
                                         }
-                                        return Mono.just(savedBooking);
+                                    }, throwable -> {
                                     })
                             );
                 });
     }
 
-    private Mono<BookingDto> processFinishBooking(BookingDto booking, SpotDto spot) {
+    private Mono<BookingDto> processFinishBooking(BookingDto booking) {
+        SpotDto spot = booking.getSpot();
+
         final int MIN_BOOKING_MINUTES = 30;
 
         if (!booking.getState().equals(IN_PROGRESS))
@@ -232,31 +249,32 @@ public class BookingService {
         booking.setTotalMinutes(totalMinutes);
         booking.setState(FINISHED);
 
-        spot.setState(AVAILABLE);
-
         return paymentService.processPaymentForBooking(booking, totalPrice)
-                .flatMap(payment -> {
-                    booking.setPayment(payment);
+                .map(processedPayment -> {
+                    booking.setPayment(processedPayment);
+                    return booking;
+                })
+                .flatMap(b -> bookingDao.saveBooking(b))
+                .doOnNext(savedBooking -> bookingDao.getBookingsBySpot(savedBooking.getSpot().getId())
+                        .collectList()
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .subscribe(bookings -> {
+                            int spotSize = (int) bookings.stream()
+                                    .filter(b -> !b.getState().equals(FINISHED) && !b.getState().equals(CANCELED))
+                                    .count();
 
-                    return bookingDao.saveBooking(booking)
-                            .flatMap(savedBooking -> bookingDao.getBookingsBySpot(spot.getId())
-                                    .collectList()
-                                    .flatMap(bookings -> {
-                                        int spotSize = (int) bookings.stream()
-                                                .filter(b -> !b.getState().equals(FINISHED) && !b.getState().equals(CANCELED))
-                                                .count();
-
-                                        if (spotSize < spot.getCapacity()) {
-                                            spot.setState(AVAILABLE);
-                                            return spotService.updateSpot(spot).then(Mono.just(savedBooking));
-                                        }
-                                        return Mono.just(savedBooking);
-                                    })
-                            );
-                });
+                            if (spotSize < spot.getCapacity()) {
+                                spot.setState(AVAILABLE);
+                                spotService.updateSpot(spot);
+                            }
+                        }, throwable -> {
+                        })
+                );
     }
 
-    private Mono<BookingDto> processCancelBooking(BookingDto booking, SpotDto spot) {
+    private Mono<BookingDto> processCancelBooking(BookingDto booking) {
+        SpotDto spot = booking.getSpot();
+
         if (booking.getState().equals(IN_PROGRESS)) {
             return finishBooking(booking.getId());
 
@@ -265,22 +283,23 @@ public class BookingService {
             booking.setState(CANCELED);
 
             return bookingDao.saveBooking(booking)
-                    .flatMap(savedBooking -> bookingDao.getBookingsBySpot(spot.getId())
-                            .collectList()
-                            .flatMap(bookings -> {
+                    .doOnNext(savedBooking -> bookingDao.getBookingsBySpot(spot.getId()).collectList()
+                            .subscribeOn(Schedulers.boundedElastic())
+                            .subscribe(bookings -> {
                                 int spotSize = (int) bookings.stream()
                                         .filter(b -> !b.getState().equals(FINISHED) && !b.getState().equals(CANCELED))
                                         .count();
 
                                 if (spotSize < spot.getCapacity()) {
                                     spot.setState(AVAILABLE);
-                                    return spotService.updateSpot(spot)
-                                            .then(Mono.just(savedBooking));
+                                    spotService.updateSpot(spot);
                                 }
-                                return Mono.just(savedBooking);
-                            }))
-                    .flatMap(savedBooking -> paymentService.getPayment(savedBooking.getPayment().getId())
-                            .flatMap(payment -> {
+                            }, throwable -> {
+                            })
+                    )
+                    .doOnNext(savedBooking -> paymentService.getPayment(savedBooking.getPayment().getId())
+                            .subscribeOn(Schedulers.boundedElastic())
+                            .subscribe(payment -> {
                                 payment.setLastStatus(PaymentStatus.CANCELED);
                                 payment.getTransactionDetails().add(PaymentTransactionDetail.builder()
                                         .date(OffsetDateTime.now())
@@ -288,9 +307,10 @@ public class BookingService {
                                         .statusDetail("Payment is canceled due booking cancellation")
                                         .build());
 
-                                return paymentService.savePayment(payment)
-                                        .then(Mono.just(savedBooking));
-                            }));
+                                paymentService.savePayment(payment);
+                            }, throwable -> {
+                            })
+                    );
         } else {
             return Mono.error(new BookingFinishedException("Booking is not in correct state"));
         }

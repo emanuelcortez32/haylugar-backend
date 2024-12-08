@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class UserDto extends EntityDto {
+public class UserDto extends EntityDto<UserEntity, UserDto> {
     private String email;
     private String password;
     private UserState state;
@@ -33,7 +33,8 @@ public class UserDto extends EntityDto {
         this.profile = profile;
     }
 
-    public static UserDto.UserDtoBuilder builderFromEntity(UserEntity entity) {
+    @Override
+    public UserDto dtoFromEntity(UserEntity entity) {
         return UserDto.builder()
                 .id(entity.getId())
                 .email(entity.getEmail())
@@ -41,10 +42,12 @@ public class UserDto extends EntityDto {
                 .state(entity.getState())
                 .roles(entity.getRoles())
                 .createdAt(entity.getCreatedAt())
-                .version(entity.getVersion());
+                .version(entity.getVersion())
+                .build();
     }
 
-    public static UserEntity mapToEntity(UserDto dto) {
+    @Override
+    public UserEntity dtoToEntity(UserDto dto) {
         return UserEntity.builder()
                 .id(dto.getId())
                 .email(dto.getEmail())

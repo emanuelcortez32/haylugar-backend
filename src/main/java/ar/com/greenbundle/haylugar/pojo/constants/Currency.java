@@ -9,7 +9,6 @@ public enum Currency {
     PEN,
     UTU,
     VES,
-
     USD,
     EUR
 }

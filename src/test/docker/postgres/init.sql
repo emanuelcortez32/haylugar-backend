@@ -1,8 +1,9 @@
 -- Schemas --
 CREATE SCHEMA app;
 
-
 -- Tables --
+
+-- App Configs --
 CREATE TABLE app.geo_zones (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name VARCHAR(255) NOT NULL,
@@ -15,28 +16,25 @@ CREATE TABLE app.geo_zones (
     deleted BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE IF NOT EXISTS public.users (
+CREATE TABLE app.rules (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    state VARCHAR(50) NOT NULL,
-    roles TEXT[] DEFAULT ARRAY['ROLE_USER']::TEXT[] NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     version INTEGER DEFAULT 1,
     deleted BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE IF NOT EXISTS public.user_vehicles (
+-- Business Tables --
+
+CREATE TABLE IF NOT EXISTS public.users (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    user_id VARCHAR(255) NOT NULL,
-    brand VARCHAR(50) NOT NULL,
-    model VARCHAR(50) NOT NULL,
-    patent VARCHAR(50) NOT NULL UNIQUE,
-    year VARCHAR(50) NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    size VARCHAR(50) NOT NULL,
-    default_vehicle BOOLEAN DEFAULT FALSE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    state VARCHAR(50) NOT NULL,
+    roles TEXT[] DEFAULT ARRAY['ROLE_USER']::TEXT[] NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     version INTEGER DEFAULT 1,
@@ -61,7 +59,36 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 CREATE TABLE IF NOT EXISTS public.user_payment_profiles (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id VARCHAR(255) NOT NULL,
-    customer_id VARCHAR(255) NOT NULL UNIQUE,
+    external_reference_id VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS public.user_balances (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id VARCHAR(255) NOT NULL,
+    total_amount DOUBLE PRECISION NOT NULL,
+    amount_pending_to_withdraw DOUBLE PRECISION NOT NULL,
+    amount_available_to_withdraw DOUBLE PRECISION NOT NULL,
+    available_minutes INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER DEFAULT 1,
+    deleted BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS public.user_vehicles (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id VARCHAR(255) NOT NULL,
+    brand VARCHAR(50) NOT NULL,
+    model VARCHAR(50) NOT NULL,
+    patent VARCHAR(50) NOT NULL UNIQUE,
+    year VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    size VARCHAR(50) NOT NULL,
+    default_vehicle BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     version INTEGER DEFAULT 1,
@@ -71,7 +98,7 @@ CREATE TABLE IF NOT EXISTS public.user_payment_profiles (
 CREATE TABLE IF NOT EXISTS public.user_payment_cards (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     payment_profile_id VARCHAR(255) NOT NULL,
-    reference_id VARCHAR(255) NOT NULL,
+    external_reference_id VARCHAR(255) NOT NULL UNIQUE,
     token VARCHAR(255) NOT NULL,
     expiration_month INTEGER NOT NULL,
     expiration_year INTEGER NOT NULL,
@@ -109,7 +136,6 @@ CREATE TABLE IF NOT EXISTS public.spots (
 CREATE TABLE IF NOT EXISTS public.bookings (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     client_user_id VARCHAR(255) NOT NULL,
-    spot_owner_id VARCHAR(255) NOT NULL,
     spot_id VARCHAR(255) NOT NULL,
     payment_id VARCHAR(255),
     vehicle_id VARCHAR(255),
@@ -127,7 +153,7 @@ CREATE TABLE IF NOT EXISTS public.bookings (
 
 CREATE TABLE IF NOT EXISTS public.payments (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    reference_id VARCHAR(255),
+    external_reference_id VARCHAR(255) UNIQUE,
     method VARCHAR(50) NOT NULL,
     provider VARCHAR(50) DEFAULT 'NOT_DEFINED',
     total_price DOUBLE PRECISION DEFAULT 0.0,
@@ -137,18 +163,6 @@ CREATE TABLE IF NOT EXISTS public.payments (
     currency VARCHAR(3) DEFAULT 'ARS',
     last_status VARCHAR(50) DEFAULT 'PENDING',
     transaction_details JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    version INTEGER DEFAULT 1,
-    deleted BOOLEAN DEFAULT FALSE
-);
-
-CREATE TABLE IF NOT EXISTS public.user_balances (
-    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    user_id VARCHAR(255) NOT NULL,
-    total_amount DOUBLE PRECISION NOT NULL,
-    amount_pending_to_withdraw DOUBLE PRECISION NOT NULL,
-    amount_available_to_withdraw DOUBLE PRECISION NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     version INTEGER DEFAULT 1,
@@ -271,9 +285,6 @@ VALUES ('user2@example.com', '$2a$10$kMQldozY8aK6iSodD0Tl1uQDoExQJjjd9NXc260oXGk
 INSERT INTO public.users(email, password, state, roles)
 VALUES ('user3@example.com', '$2a$10$kMQldozY8aK6iSodD0Tl1uQDoExQJjjd9NXc260oXGkxzs.2FAIkG', 'ACTIVE', ARRAY['ROLE_USER']);
 
-INSERT INTO public.user_vehicles (user_id, brand, model, patent, year, type, size)
-VALUES ((SELECT id FROM users WHERE email = 'user2@example.com'), 'Ford', 'KA', 'LGL308', '2012', 'CAR', 'SMALL');
-
 INSERT INTO public.user_profiles (user_id, name, surname, dni, gender, birth_date, nationality)
 VALUES ((SELECT id FROM users WHERE email = 'user@example.com'),'Juan', 'Pérez', '12345678', 'MALE', '15/10/1996', 'ARGENTINEAN');
 
@@ -283,14 +294,18 @@ VALUES ((SELECT id FROM users WHERE email = 'user2@example.com'),'Camila', 'Boni
 INSERT INTO public.user_profiles (user_id ,name, surname, dni, gender, birth_date, nationality)
 VALUES ((SELECT id FROM users WHERE email = 'user3@example.com'),'Roberto', 'Galatti', '12345680', 'MALE', '15/10/1996', 'ARGENTINEAN');
 
-INSERT INTO public.user_payment_profiles (user_id, customer_id)
+INSERT INTO public.user_payment_profiles (user_id, external_reference_id)
 VALUES ((SELECT id FROM users WHERE email = 'user@example.com'), '2044842671-qk2aKNIOhhyMEx');
 
-INSERT INTO public.user_payment_profiles (user_id, customer_id)
+INSERT INTO public.user_payment_profiles (user_id, external_reference_id)
 VALUES ((SELECT id FROM users WHERE email = 'user2@example.com'), '2045962604-jef6hMCbCinmle');
 
-INSERT INTO public.user_payment_profiles (user_id, customer_id)
+INSERT INTO public.user_payment_profiles (user_id, external_reference_id)
 VALUES ((SELECT id FROM users WHERE email = 'user3@example.com'), '2045962604-jef6hMCbCinml4');
+
+INSERT INTO public.user_vehicles (user_id, brand, model, patent, year, type, size)
+VALUES ((SELECT id FROM users WHERE email = 'user2@example.com'), 'Ford', 'KA', 'LGL308', '2012', 'CAR', 'SMALL');
+
 
 INSERT INTO public.spots(landlord_user_id, type, location, address, capacity, price_per_minute, description, state)
 VALUES (
@@ -349,25 +364,6 @@ VALUES (
     'Garage cubierto con espacio para un auto, con buena ventilación y fácil acceso desde la calle principal.',
     'AVAILABLE');
 
-INSERT INTO public.payments(method, transaction_details)
-VALUES ('CREDIT_CARD',
-        jsonb_build_array(
-                jsonb_build_object(
-                    'date', CURRENT_TIMESTAMP,
-                    'status', 'PENDING',
-                    'statusDetail', 'Payment is pending'
-                )
-        ));
-
-INSERT INTO public.bookings(client_user_id, spot_owner_id, spot_id, payment_id, vehicle_id, state)
-VALUES (
-    (SELECT id FROM users WHERE email = 'user2@example.com'),
-    (SELECT id FROM users WHERE email = 'user@example.com'),
-    (SELECT id FROM spots LIMIT 1),
-    (SELECT id FROM payments LIMIT 1),
-    (SELECT id FROM user_vehicles LIMIT 1),
-    'PENDING');
-
 INSERT INTO public.user_balances(user_id, total_amount, amount_pending_to_withdraw, amount_available_to_withdraw)
 VALUES ((SELECT id FROM users WHERE email = 'user@example.com'), 500.0, 100.0, 400.0);
 
@@ -409,11 +405,6 @@ ON DELETE NO ACTION;
 ALTER TABLE public.bookings
 ADD CONSTRAINT fk_client_user
 FOREIGN KEY (client_user_id) REFERENCES public.users(id)
-ON DELETE NO ACTION;
-
-ALTER TABLE public.bookings
-ADD CONSTRAINT fk_spot_owner
-FOREIGN KEY (spot_owner_id) REFERENCES public.users(id)
 ON DELETE NO ACTION;
 
 ALTER TABLE public.bookings

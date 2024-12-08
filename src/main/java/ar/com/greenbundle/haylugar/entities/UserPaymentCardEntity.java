@@ -18,8 +18,8 @@ import java.time.LocalDateTime;
 public class UserPaymentCardEntity extends GenericEntity {
     @Column("payment_profile_id")
     private String paymentProfileId;
-    @Column("reference_id")
-    private String referenceId;
+    @Column("external_reference_id")
+    private String externalReferenceId;
     private String token;
     @Column("expiration_month")
     private Integer expirationMonth;
@@ -41,10 +41,10 @@ public class UserPaymentCardEntity extends GenericEntity {
     private String issuerName;
 
     @Builder
-    public UserPaymentCardEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String paymentProfileId, String referenceId, String token, Integer expirationMonth, Integer expirationYear, boolean cardDefault, String paymentType, String paymentMethod, Integer securityCodeLength, String securityCodeCardLocation, String issuerId, String issuerName) {
+    public UserPaymentCardEntity(String id, LocalDateTime createdAt, LocalDateTime updatedAt, Long version, boolean deleted, String paymentProfileId, String externalReferenceId, String token, Integer expirationMonth, Integer expirationYear, boolean cardDefault, String paymentType, String paymentMethod, Integer securityCodeLength, String securityCodeCardLocation, String issuerId, String issuerName) {
         super(id, createdAt, updatedAt, version, deleted);
         this.paymentProfileId = paymentProfileId;
-        this.referenceId = referenceId;
+        this.externalReferenceId = externalReferenceId;
         this.token = token;
         this.expirationMonth = expirationMonth;
         this.expirationYear = expirationYear;

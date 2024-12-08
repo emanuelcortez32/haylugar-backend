@@ -17,20 +17,21 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class SpotDto extends EntityDto {
+public class SpotDto extends EntityDto<SpotEntity, SpotDto> {
     private UserDto landLord;
     private SpotType type;
     private Point location;
     private Address address;
     private String zone;
     private int capacity;
+    private int capacityAvailable;
     private double pricePerMinute;
     private String description;
     private SpotState state;
     private String[] photos;
 
     @Builder
-    public SpotDto(String id, LocalDateTime createdAt, Long version, UserDto landLord, SpotType type, Point location, Address address, String zone, int capacity, double pricePerMinute, String description, SpotState state, String[] photos) {
+    public SpotDto(String id, LocalDateTime createdAt, Long version, UserDto landLord, SpotType type, Point location, Address address, String zone, int capacity, int capacityAvailable, double pricePerMinute, String description, SpotState state, String[] photos) {
         super(id, createdAt, version);
         this.landLord = landLord;
         this.type = type;
@@ -38,13 +39,15 @@ public class SpotDto extends EntityDto {
         this.address = address;
         this.zone = zone;
         this.capacity = capacity;
+        this.capacityAvailable = capacityAvailable;
         this.pricePerMinute = pricePerMinute;
         this.description = description;
         this.state = state;
         this.photos = photos;
     }
 
-    public static SpotDto.SpotDtoBuilder builderFromEntity(SpotEntity entity) {
+    @Override
+    public SpotDto dtoFromEntity(SpotEntity entity) {
         return SpotDto.builder()
                 .id(entity.getId())
                 .landLord(UserDto.builder().id(entity.getLandLordUserId()).build())
@@ -52,21 +55,25 @@ public class SpotDto extends EntityDto {
                 .state(entity.getState())
                 .photos(entity.getPhotos())
                 .capacity(entity.getCapacity())
+                .capacityAvailable(entity.getCapacityAvailable())
                 .location(entity.getLocation())
                 .address(entity.getAddress())
                 .zone(entity.getZone())
                 .pricePerMinute(entity.getPricePerMinute())
                 .description(entity.getDescription())
                 .createdAt(entity.getCreatedAt())
-                .version(entity.getVersion());
+                .version(entity.getVersion())
+                .build();
     }
 
-    public static SpotEntity mapToEntity(SpotDto dto) {
+    @Override
+    public SpotEntity dtoToEntity(SpotDto dto) {
         return SpotEntity.builder()
                 .id(dto.getId())
                 .landLordUserId(dto.getLandLord().getId())
                 .type(dto.getType())
                 .capacity(dto.getCapacity())
+                .capacityAvailable(dto.getCapacityAvailable())
                 .location(dto.getLocation())
                 .address(dto.getAddress())
                 .zone(dto.getZone())

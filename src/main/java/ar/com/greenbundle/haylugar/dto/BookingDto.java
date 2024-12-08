@@ -15,9 +15,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class BookingDto extends EntityDto {
+public class BookingDto extends EntityDto<BookingEntity, BookingDto> {
     private UserDto client;
-    private UserDto spotOwner;
     private SpotDto spot;
     private PaymentDto payment;
     private UserVehicleDto vehicle;
@@ -30,10 +29,9 @@ public class BookingDto extends EntityDto {
     private BookingUserAs bookingUserAs;
 
     @Builder
-    public BookingDto(String id, LocalDateTime createdAt, Long version, UserDto client, UserDto spotOwner, SpotDto spot, PaymentDto payment, UserVehicleDto vehicle, LocalDateTime startDate, String startTime, LocalDateTime endDate, String endTime, long totalMinutes, BookingState state, BookingUserAs bookingUserAs) {
+    public BookingDto(String id, LocalDateTime createdAt, Long version, UserDto client, SpotDto spot, PaymentDto payment, UserVehicleDto vehicle, LocalDateTime startDate, String startTime, LocalDateTime endDate, String endTime, long totalMinutes, BookingState state, BookingUserAs bookingUserAs) {
         super(id, createdAt, version);
         this.client = client;
-        this.spotOwner = spotOwner;
         this.spot = spot;
         this.payment = payment;
         this.vehicle = vehicle;
@@ -46,10 +44,10 @@ public class BookingDto extends EntityDto {
         this.bookingUserAs = bookingUserAs;
     }
 
-    public static BookingDto.BookingDtoBuilder builderFromEntity(BookingEntity entity) {
+    @Override
+    public BookingDto dtoFromEntity(BookingEntity entity) {
         return BookingDto.builder()
                 .id(entity.getId())
-                .spotOwner(UserDto.builder().id(entity.getSpotOwnerId()).build())
                 .client(UserDto.builder().id(entity.getClientUserId()).build())
                 .payment(PaymentDto.builder().id(entity.getPaymentId()).build())
                 .vehicle(UserVehicleDto.builder().id(entity.getVehicleId()).build())
@@ -61,10 +59,12 @@ public class BookingDto extends EntityDto {
                 .endDate(entity.getEndDate())
                 .state(entity.getState())
                 .createdAt(entity.getCreatedAt())
-                .version(entity.getVersion());
+                .version(entity.getVersion())
+                .build();
     }
 
-    public static BookingEntity mapToEntity(BookingDto dto) {
+    @Override
+    public BookingEntity dtoToEntity(BookingDto dto) {
         return BookingEntity.builder()
                 .id(dto.getId())
                 .state(dto.getState())
@@ -73,10 +73,9 @@ public class BookingDto extends EntityDto {
                 .endDate(dto.getEndDate())
                 .endTime(dto.getEndTime())
                 .totalMinutes(dto.getTotalMinutes())
-                .clientUserId(dto.getClient().getId())
-                .spotOwnerId(dto.getSpotOwner().getId())
-                .paymentId(dto.getPayment().getId())
-                .spotId(dto.getSpot().getId())
+                .clientUserId(dto.getClient() != null ? dto.getClient().getId() : null)
+                .paymentId(dto.getPayment() != null ? dto.getPayment().getId() : null)
+                .spotId(dto.getSpot() != null ? dto.getSpot().getId() : null)
                 .createdAt(dto.getCreatedAt())
                 .version(dto.getVersion())
                 .build();

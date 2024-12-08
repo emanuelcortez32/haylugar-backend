@@ -37,4 +37,5 @@ public class Payment {
     private OffsetDateTime dateOfExpiration;
     private OffsetDateTime moneyReleaseDate;
     private Map<String, Object> metadata;
+    private String initUrl;
 }

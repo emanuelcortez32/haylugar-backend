@@ -18,28 +18,43 @@ public class SpotDao {
     public Mono<SpotDto> getSpot(String spotId) {
         return spotRepository.findById(spotId)
                 .filter(spot -> !spot.isDeleted())
-                .map(spot -> SpotDto.builderFromEntity(spot).build());
+                .flatMap(spot -> userDao.getUser(spot.getLandLordUserId())
+                        .map(user -> {
+                            SpotDto spotDto = new SpotDto().dtoFromEntity(spot);
+                            spotDto.setLandLord(user);
+                            return spotDto;
+                        }));
     }
 
     public Flux<SpotDto> getSpotsByUser(String userId) {
         return spotRepository.findSpotsByLandLordUserId(userId)
                 .filter(spot -> !spot.isDeleted())
-                .map(spot -> SpotDto.builderFromEntity(spot).build());
+                .flatMap(spot -> userDao.getUser(spot.getLandLordUserId())
+                        .map(user -> {
+                            SpotDto spotDto = new SpotDto().dtoFromEntity(spot);
+                            spotDto.setLandLord(user);
+                            return spotDto;
+                        }));
     }
 
     public Flux<SpotDto> findSpotsByLocationAndRadio(double longitude, double latitude, int radio) {
         return spotRepository.findSpotsByCoordinatesAndRadioInMeters(longitude, latitude, radio)
                 .filter(spot -> !spot.isDeleted())
-                .map(spot -> SpotDto.builderFromEntity(spot).build());
+                .flatMap(spot -> userDao.getUser(spot.getLandLordUserId())
+                        .map(user -> {
+                            SpotDto spotDto = new SpotDto().dtoFromEntity(spot);
+                            spotDto.setLandLord(user);
+                            return spotDto;
+                        }));
     }
 
     public Mono<SpotDto> saveSpot(SpotDto spotDto) {
-        return spotRepository.save(SpotDto.mapToEntity(spotDto))
-                .map(spot -> SpotDto.builderFromEntity(spot).build());
+        return spotRepository.save(new SpotDto().dtoToEntity(spotDto))
+                .flatMap(savedSpot -> getSpot(savedSpot.getId()));
     }
 
     public Mono<Void> deleteSpot(SpotDto spotDto) {
-        SpotEntity entity = SpotDto.mapToEntity(spotDto);
+        SpotEntity entity = new SpotDto().dtoToEntity(spotDto);
         entity.setDeleted(true);
 
         return spotRepository.save(entity)

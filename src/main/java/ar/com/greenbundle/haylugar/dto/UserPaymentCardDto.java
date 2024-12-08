@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class UserPaymentCardDto extends EntityDto  {
+public class UserPaymentCardDto extends EntityDto<UserPaymentCardEntity, UserPaymentCardDto>  {
     private String paymentProfileId;
-    private String referenceId;
+    private String externalReferenceId;
     private String token;
     private Integer expirationMonth;
     private Integer expirationYear;
@@ -27,10 +27,10 @@ public class UserPaymentCardDto extends EntityDto  {
     private String issuerId;
     private String issuerName;
     @Builder
-    public UserPaymentCardDto(String id, LocalDateTime createdAt, Long version, String paymentProfileId, String referenceId, String token, Integer expirationMonth, Integer expirationYear, boolean cardDefault, String paymentType, String paymentMethod, Integer securityCodeLength, String securityCodeCardLocation, String issuerId, String issuerName) {
+    public UserPaymentCardDto(String id, LocalDateTime createdAt, Long version, String paymentProfileId, String externalReferenceId, String token, Integer expirationMonth, Integer expirationYear, boolean cardDefault, String paymentType, String paymentMethod, Integer securityCodeLength, String securityCodeCardLocation, String issuerId, String issuerName) {
         super(id, createdAt, version);
         this.paymentProfileId = paymentProfileId;
-        this.referenceId = referenceId;
+        this.externalReferenceId = externalReferenceId;
         this.token = token;
         this.expirationMonth = expirationMonth;
         this.expirationYear = expirationYear;
@@ -43,11 +43,12 @@ public class UserPaymentCardDto extends EntityDto  {
         this.issuerName = issuerName;
     }
 
-    public static UserPaymentCardDto.UserPaymentCardDtoBuilder builderFromEntity(UserPaymentCardEntity entity) {
+    @Override
+    public UserPaymentCardDto dtoFromEntity(UserPaymentCardEntity entity) {
         return UserPaymentCardDto.builder()
                 .id(entity.getId())
                 .paymentProfileId(entity.getPaymentProfileId())
-                .referenceId(entity.getReferenceId())
+                .externalReferenceId(entity.getExternalReferenceId())
                 .token(entity.getToken())
                 .expirationMonth(entity.getExpirationMonth())
                 .expirationYear(entity.getExpirationYear())
@@ -59,14 +60,16 @@ public class UserPaymentCardDto extends EntityDto  {
                 .issuerId(entity.getIssuerId())
                 .issuerName(entity.getIssuerName())
                 .createdAt(entity.getCreatedAt())
-                .version(entity.getVersion());
+                .version(entity.getVersion())
+                .build();
     }
 
-    public static UserPaymentCardEntity mapToEntity(UserPaymentCardDto dto) {
+    @Override
+    public UserPaymentCardEntity dtoToEntity(UserPaymentCardDto dto) {
         return UserPaymentCardEntity.builder()
                 .id(dto.getId())
                 .paymentProfileId(dto.getPaymentProfileId())
-                .referenceId(dto.getReferenceId())
+                .externalReferenceId(dto.getExternalReferenceId())
                 .token(dto.getToken())
                 .expirationMonth(dto.getExpirationMonth())
                 .expirationYear(dto.getExpirationYear())

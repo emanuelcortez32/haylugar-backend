@@ -1,4 +1,4 @@
-package ar.com.greenbundle.haylugar.config;
+package ar.com.greenbundle.haylugar.config.aws;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class AwsSsmParamConfig {
+public class SsmParamConfig {
     @Value("${aws.region}")
     private String region;
     @Value("${aws.ssm.endpoint:NONE}")

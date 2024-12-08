@@ -11,15 +11,14 @@ import java.util.UUID;
 import static ar.com.greenbundle.haylugar.pojo.constants.Currency.ARS;
 import static ar.com.greenbundle.haylugar.pojo.constants.PaymentMethod.CREDIT_CARD;
 import static ar.com.greenbundle.haylugar.pojo.constants.PaymentProvider.FAKE;
-import static ar.com.greenbundle.haylugar.pojo.constants.PaymentStatus.APPROVED;
+import static ar.com.greenbundle.haylugar.pojo.constants.PaymentStatus.SUCCESS;
 
 public class FakeProvider implements PaymentProvider {
     @Override
-    public Payment createPayment(String customerId, String customerEmail, String cardToken, double amount) {
-        double totalPrice = amount;
-        double providerAmount = ((double) 3 / 100) * totalPrice;
-        double netReceivedAmount = totalPrice - providerAmount;
-        double userNetAmount = ((double) 80 / 100) * totalPrice;
+    public Payment createPayment(String customerId, String customerEmail, double amount) {
+        double providerAmount = ((double) 3 / 100) * amount;
+        double netReceivedAmount = amount - providerAmount;
+        double userNetAmount = ((double) 80 / 100) * amount;
         double platformAmount = netReceivedAmount - userNetAmount;
 
 
@@ -30,7 +29,7 @@ public class FakeProvider implements PaymentProvider {
                 .paymentTypeId("visa")
                 .paymentMethodId("credit_card")
                 .currency(ARS)
-                .totalPrice(totalPrice)
+                .totalPrice(amount)
                 .providerAmount(providerAmount)
                 .platformAmount(platformAmount)
                 .userNetAmount(userNetAmount)
@@ -42,7 +41,7 @@ public class FakeProvider implements PaymentProvider {
                 .dateOfExpiration(OffsetDateTime.now().plusDays(2))
                 .moneyReleaseDate(null)
                 .metadata(Map.of("some","data"))
-                .status(APPROVED)
+                .status(SUCCESS)
                 .statusDetail("ok")
                 .build();
     }
@@ -71,5 +70,20 @@ public class FakeProvider implements PaymentProvider {
                 .identificationNumber("1111111")
                 .cards(List.of())
                 .build();
+    }
+
+    @Override
+    public Payment updatePayment(Payment payment) {
+        return payment;
+    }
+
+    @Override
+    public Payment getPayment(String paymentId) {
+        return null;
+    }
+
+    @Override
+    public Payment getPaymentByOrder(Long orderId) {
+        return null;
     }
 }

@@ -17,6 +17,9 @@ public class UserDao {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserProfileDao userProfileDao;
+
     public Mono<UserDto> getUserByEmail(String userEmail) {
         return findUserByCriteria(Map.of("email", userEmail));
     }
@@ -28,9 +31,9 @@ public class UserDao {
     public Mono<UserDto> saveUser(UserDto userData) {
         return userRepository.findByEmail(userData.getEmail())
                 .flatMap(__ -> Mono.error(new CreateUserException("User already exists")))
-                .switchIfEmpty(userRepository.save(UserDto.mapToEntity(userData)))
+                .switchIfEmpty(userRepository.save(new UserDto().dtoToEntity(userData)))
                 .cast(UserEntity.class)
-                .map(user -> UserDto.builderFromEntity(user).build());
+                .map(user -> new UserDto().dtoFromEntity(user));
     }
 
     private Mono<UserDto> findUserByCriteria(Map<String, String> criteria) {
@@ -48,6 +51,11 @@ public class UserDao {
 
         return initialOperation
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("User not found")))
-                .map(user -> UserDto.builderFromEntity(user).build());
+                .map(user -> new UserDto().dtoFromEntity(user))
+                .flatMap(user -> userProfileDao.getProfileByUser(user.getId())
+                        .map(userProfile -> {
+                            user.setProfile(userProfile);
+                            return user;
+                        }));
     }
 }

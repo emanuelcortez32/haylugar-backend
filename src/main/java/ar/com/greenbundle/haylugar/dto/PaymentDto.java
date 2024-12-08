@@ -19,8 +19,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class PaymentDto extends EntityDto {
-    private String referenceId;
+public class PaymentDto extends EntityDto<PaymentEntity, PaymentDto> {
+    private String externalReferenceId;
     private PaymentMethod method;
     private PaymentProvider provider;
     private double totalPrice;
@@ -32,9 +32,9 @@ public class PaymentDto extends EntityDto {
     private List<PaymentTransactionDetail> transactionDetails;
 
     @Builder
-    public PaymentDto(String id, LocalDateTime createdAt, Long version, String referenceId, PaymentMethod method, PaymentProvider provider, double totalPrice, double providerAmount, double platformAmount, double userNetAmount, Currency currency, PaymentStatus lastStatus, List<PaymentTransactionDetail> transactionDetails) {
+    public PaymentDto(String id, LocalDateTime createdAt, Long version, String externalReferenceId, PaymentMethod method, PaymentProvider provider, double totalPrice, double providerAmount, double platformAmount, double userNetAmount, Currency currency, PaymentStatus lastStatus, List<PaymentTransactionDetail> transactionDetails) {
         super(id, createdAt, version);
-        this.referenceId = referenceId;
+        this.externalReferenceId = externalReferenceId;
         this.method = method;
         this.provider = provider;
         this.totalPrice = totalPrice;
@@ -46,10 +46,11 @@ public class PaymentDto extends EntityDto {
         this.transactionDetails = transactionDetails;
     }
 
-    public static PaymentDto.PaymentDtoBuilder builderFromEntity(PaymentEntity entity) {
+    @Override
+    public PaymentDto dtoFromEntity(PaymentEntity entity) {
         return PaymentDto.builder()
                 .id(entity.getId())
-                .referenceId(entity.getReferenceId())
+                .externalReferenceId(entity.getExternalReferenceId())
                 .method(entity.getMethod())
                 .provider(entity.getProvider())
                 .totalPrice(entity.getTotalPrice())
@@ -60,13 +61,15 @@ public class PaymentDto extends EntityDto {
                 .lastStatus(entity.getLastStatus())
                 .transactionDetails(entity.getTransactionDetails())
                 .createdAt(entity.getCreatedAt())
-                .version(entity.getVersion());
+                .version(entity.getVersion())
+                .build();
     }
 
-    public static PaymentEntity mapToEntity(PaymentDto dto) {
+    @Override
+    public PaymentEntity dtoToEntity(PaymentDto dto) {
         return PaymentEntity.builder()
                 .id(dto.getId())
-                .referenceId(dto.getReferenceId())
+                .externalReferenceId(dto.getExternalReferenceId())
                 .method(dto.getMethod())
                 .provider(dto.getProvider())
                 .totalPrice(dto.getTotalPrice())

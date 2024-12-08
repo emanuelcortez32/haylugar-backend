@@ -21,6 +21,4 @@ public class CreateBookingRequest extends ValidatedRequestBean {
     private PaymentMethod paymentMethod;
     @NotNull(message = "Currency is required")
     private Currency currency;
-    @NotNull(message = "Token card is required")
-    private String tokenCard;
 }

@@ -1,8 +1,6 @@
 package ar.com.greenbundle.haylugar.rest.controllers;
 
 import ar.com.greenbundle.haylugar.dto.BookingDto;
-import ar.com.greenbundle.haylugar.dto.PaymentDto;
-import ar.com.greenbundle.haylugar.dto.SpotDto;
 import ar.com.greenbundle.haylugar.pojo.constants.BookingAction;
 import ar.com.greenbundle.haylugar.rest.requests.CreateBookingRequest;
 import ar.com.greenbundle.haylugar.rest.responses.ApiResponse;
@@ -98,13 +96,7 @@ public class BookingController {
 
         request.validate();
 
-        BookingDto bookingDto = BookingDto.builder()
-                .spot(SpotDto.builder().id(request.getSpotId()).build())
-                .payment(PaymentDto.builder().method(request.getPaymentMethod()).currency(request.getCurrency()).build())
-                .build();
-
-
-        return bookingService.createBooking(principal.getUsername(), bookingDto)
+        return bookingService.createBooking(principal.getUsername(), request.getSpotId(), request.getPaymentMethod(), request.getCurrency())
                 .map(bookingId -> new ResponseEntity<>(CreateBookingResponse.builder()
                         .success(true)
                         .message("OK")

@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class LocationProviderConfig {
+public class LocationConfig {
     @Bean(name = "openStreetMapsProvider")
     public LocationProvider openStreetMapsProvider(ObjectMapper objectMapper) {
         OpenStreetMapClient client = new OpenStreetMapClient(objectMapper);

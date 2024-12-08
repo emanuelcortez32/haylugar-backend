@@ -77,7 +77,7 @@ public class UserService {
                     .flatMap(savedUser -> {
 
                         UserProfileDto userProfile = UserProfileDto.builder()
-                                .user(savedUser)
+                                .userId(savedUser.getId())
                                 .name(user.getProfile().getName())
                                 .lastName(user.getProfile().getLastName())
                                 .dni(user.getProfile().getDni())
@@ -93,10 +93,8 @@ public class UserService {
                                             .subscribeOn(Schedulers.boundedElastic())
                                             .doOnError(throwable -> log.warn("Payment profile for userId[{}] could not be created [{}]",
                                                     savedUser.getId(), throwable.getMessage()))
-                                            .subscribe(result -> {
-                                                log.info("Payment profile for userId[{}] created with id[{}]",
-                                                        savedUser.getId(), result);
-                                            }, throwable -> {});
+                                            .subscribe(result -> log.info("Payment profile for userId[{}] created with id[{}]",
+                                                    savedUser.getId(), result), throwable -> {});
                                 })
                                 .then(Mono.just(savedUser.getId()));
                     });
