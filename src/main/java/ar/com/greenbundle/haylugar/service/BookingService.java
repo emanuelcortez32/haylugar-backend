@@ -53,7 +53,7 @@ public class BookingService {
     private SpotService spotService;
 
     public Flux<BookingDto> findBookingsByUser(String userId) {
-        return bookingDao.getBookingsByUser(userId)
+        return bookingDao.getBookingsByUserClient(userId)
                 .flatMap(booking -> setUserRoleForBooking(userId, booking))
                 .distinct();
     }

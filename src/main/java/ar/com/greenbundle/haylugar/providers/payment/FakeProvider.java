@@ -15,7 +15,7 @@ import static ar.com.greenbundle.haylugar.pojo.constants.PaymentStatus.SUCCESS;
 
 public class FakeProvider implements PaymentProvider {
     @Override
-    public Payment createPayment(String customerId, String customerEmail, double amount) {
+    public Payment createPayment(String customerId, String customerEmail, double amount, String description) {
         double providerAmount = ((double) 3 / 100) * amount;
         double netReceivedAmount = amount - providerAmount;
         double userNetAmount = ((double) 80 / 100) * amount;

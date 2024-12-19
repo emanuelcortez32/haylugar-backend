@@ -49,9 +49,9 @@ public class PaymentService {
         return paymentDao.savePayment(paymentDto);
     }
 
-    public Mono<Payment> createPaymentIntentForUser(UserDto user, double amount) {
+    public Mono<Payment> createPaymentIntentForUser(UserDto user, double amount, String description) {
         Payment payment = paymentProvider.createPayment(user.getProfile().getPaymentProfile().getExternalReferenceId(),
-                user.getEmail(), amount);
+                user.getEmail(), amount, description);
 
         PaymentDto basePayment = PaymentDto.builder()
                 .externalReferenceId(payment.getId())
@@ -79,7 +79,7 @@ public class PaymentService {
 
     public Mono<PaymentDto> createPaymentSkeleton(UserDto client, PaymentDto basePayment) {
         Payment payment = paymentProvider.createPayment(client.getProfile().getPaymentProfile().getExternalReferenceId(),
-                client.getEmail(), 1);
+                client.getEmail(), 1, "");
 
         updateBookingPayment(basePayment, payment);
         return Mono.just(basePayment);
@@ -163,7 +163,7 @@ public class PaymentService {
         String customerId = bookingDto.getClient().getProfile().getPaymentProfile().getExternalReferenceId();
         String customerEmail = bookingDto.getClient().getEmail();
 
-        Payment payment = paymentProvider.createPayment(customerId, customerEmail, amount);
+        Payment payment = paymentProvider.createPayment(customerId, customerEmail, amount, "");
 
         updateBookingPayment(bookingPayment, payment);
 

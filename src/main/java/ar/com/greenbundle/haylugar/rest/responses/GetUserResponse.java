@@ -14,11 +14,13 @@ public class GetUserResponse extends ApiResponse {
     @Builder
     public GetUserResponse(boolean success,
                            String message,
+                           String email,
                            UserProfileResponse profile,
                            boolean enabled) {
         super(success, message);
         this.data = Map.of(
                 "enabled", enabled,
+                "email", email,
                 "profile", profile
         );
     }

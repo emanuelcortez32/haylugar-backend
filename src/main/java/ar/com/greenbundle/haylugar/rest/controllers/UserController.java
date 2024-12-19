@@ -23,11 +23,13 @@ import static ar.com.greenbundle.haylugar.rest.endpoints.ControllerEndpoints.MeE
 public class UserController {
     @Autowired
     private UserService userService;
+
     @GetMapping(value = GET_USER, produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponseEntity<ApiResponse>> getUser(@AuthenticationPrincipal UserDetails principal) {
         return userService.findUser(principal.getUsername())
                 .map(user -> ResponseEntity.ok(GetUserResponse.builder()
                         .enabled(user.getState().enabled)
+                        .email(user.getEmail())
                         .profile(UserProfileResponse.builder()
                                 .name(user.getProfile().getName())
                                 .surname(user.getProfile().getLastName())

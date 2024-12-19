@@ -61,6 +61,10 @@ public class MercadoPagoClient {
         }, new ThirdPartyClientResponse<>());
     }
 
+    public ThirdPartyClientResponse<Customer> searchCustomer(String customerId) {
+        return executeClientRequest(() -> customerClient.get(customerId), new ThirdPartyClientResponse<>());
+    }
+
     public ThirdPartyClientResponse<Customer> searchCustomerByEmail(String customerEmail) {
 
         return executeClientRequest(() -> {
@@ -85,17 +89,18 @@ public class MercadoPagoClient {
         }, new ThirdPartyClientResponse<>());
     }
 
-    public ThirdPartyClientResponse<Preference> createPreference(String customerEmail, double amount) {
-        final String DESCRIPTION = "Compra de Minutos HayLugar!";
+    public ThirdPartyClientResponse<Preference> createPreference(String description, String customerEmail, double amount) {
+        final String DESCRIPTION = description;
         final String STATEMENT_DESCRIPTOR = "MERCADOPAGO_HAYLUGAR";
+        final String IDEMPOTENCY_HEADER = "X-Idempotency-Key";
 
         return executeClientRequest(() -> {
             MPRequestOptions requestOptions = MPRequestOptions.builder()
-                    .customHeaders(Map.of("X-Idempotency-Key", UUID.randomUUID().toString()))
+                    .customHeaders(Map.of(IDEMPOTENCY_HEADER, UUID.randomUUID().toString()))
                     .build();
 
             PreferencePayerRequest preferencePayerRequest = PreferencePayerRequest.builder()
-                    .email("user@user.com.ar")
+                    .email(customerEmail)
                     .build();
 
             PreferenceBackUrlsRequest backUrlsRequest = PreferenceBackUrlsRequest.builder()
@@ -147,15 +152,16 @@ public class MercadoPagoClient {
         return executeClientRequest(() -> merchantOrderClient.get(merchantOrderId), new ThirdPartyClientResponse<>());
     }
 
-    public ThirdPartyClientResponse<Payment> createPayment(String customerId, String customerEmail,
-                                                  String cardToken, double amount) {
-        final String DESCRIPTION = "Pago por uso de HayLugar Spot";
+    public ThirdPartyClientResponse<Payment> createPaymentCard(String customerId, String customerEmail,
+                                                               String cardToken, double amount, String  description) {
+        final String DESCRIPTION = description;
         final String STATEMENT_DESCRIPTOR = "MERCADOPAGO_HAYLUGAR";
+        final String IDEMPOTENCY_HEADER = "X-Idempotency-Key";
         final int QUOTAS = 1;
 
         return executeClientRequest(() -> {
             MPRequestOptions requestOptions = MPRequestOptions.builder()
-                    .customHeaders(Map.of("X-Idempotency-Key", UUID.randomUUID().toString()))
+                    .customHeaders(Map.of(IDEMPOTENCY_HEADER, UUID.randomUUID().toString()))
                     .build();
 
             PaymentPayerRequest paymentPayerRequest = PaymentPayerRequest.builder()

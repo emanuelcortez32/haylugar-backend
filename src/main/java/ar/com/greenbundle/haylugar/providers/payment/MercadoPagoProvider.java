@@ -21,9 +21,9 @@ public class MercadoPagoProvider implements PaymentProvider {
     private final MercadoPagoClient mercadoPagoClient;
 
     @Override
-    public Payment createPayment(String customerId, String customerEmail, double amount) {
+    public Payment createPayment(String customerId, String customerEmail, double amount, String description) {
         ThirdPartyClientResponse<Preference> createPreference = mercadoPagoClient
-                .createPreference(customerEmail, amount);
+                .createPreference(description, customerEmail, amount);
 
         if(!createPreference.isSuccess())
             throw new PaymentProcessException("Payment could not be created");

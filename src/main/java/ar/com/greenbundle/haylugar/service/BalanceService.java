@@ -31,9 +31,10 @@ public class BalanceService {
                 .flatMap(user -> userBalanceDao.getBalanceByUser(user.getId())
                         .flatMap(balance -> {
                             final int MIN_PRICE_PER_MINUTE = 15;
-                            double totalPrice = minutes * MIN_PRICE_PER_MINUTE;
+                            final String DESCRIPTION = "Compra Minutos HayLugar!";
+                            final double TOTAL_PRICE = minutes * MIN_PRICE_PER_MINUTE;
 
-                            return paymentService.createPaymentIntentForUser(user, totalPrice);
+                            return paymentService.createPaymentIntentForUser(user, TOTAL_PRICE, DESCRIPTION);
                         }));
     }
 }

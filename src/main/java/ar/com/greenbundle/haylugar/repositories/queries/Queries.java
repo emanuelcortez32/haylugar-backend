@@ -19,7 +19,7 @@ public class Queries {
     }
     public static class Bookings {
         public static final String SELECT_BOOKINGS_BY_SPOT_ID = "SELECT * FROM bookings WHERE spot_id = :spot_id";
-        public static final String SELECT_BOOKINGS_BY_USER_ID = "SELECT * FROM bookings WHERE spot_owner_id = :user_id OR client_user_id = :user_id";
+        public static final String SELECT_BOOKINGS_BY_USER_ID_CLIENT = "SELECT * FROM bookings WHERE client_user_id = :user_id";
     }
     public static class Vehicles {
         public static final String SELECT_VEHICLES_BY_USER_ID = "SELECT * FROM user_vehicles WHERE user_id = :user_id";

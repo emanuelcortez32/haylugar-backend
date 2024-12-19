@@ -47,7 +47,7 @@ public class BookingDao {
                     return Mono.just(booking);
                 });
     }
-    public Flux<BookingDto> getBookingsByUser(String userId) {
+    public Flux<BookingDto> getBookingsByUserClient(String userId) {
         return bookingRepository.findBookingsByUserId(userId)
                 .map(booking -> new BookingDto().dtoFromEntity(booking))
                 .flatMap(booking -> userDao.getUser(booking.getClient().getId())
