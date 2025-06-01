@@ -23,7 +23,7 @@ printf "NAME"
 printf "%*sSTATUS\n" $((75 - ${#secret_name})) ""
 
 
-create_or_update_secret "/local/mercadopago/secret"                     '{"accessToken":"TEST-465192634162721-093022-e1835469ad4eb214d6074a6068c09bc5-255810323"}'
+create_or_update_secret "/local/mercadopago/secret"                     '{"your_secret":""}'
 
 echo "Secrets operation completed!.."
 echo "----------------------------------------------------------"
